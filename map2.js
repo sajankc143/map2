@@ -2,9 +2,8 @@ let map;
 let observations = [];
 let markers = [];
 let markerGroup;
-let isLoading = false; // Prevent multiple simultaneous loads
+let isLoading = false;
 
-// Source URLs to load automatically
 const sourceUrls = [
     "https://www.butterflyexplorers.com/p/new-butterflies.html",
     "https://www.butterflyexplorers.com/p/dual-checklist.html",
@@ -16,91 +15,32 @@ const sourceUrls = [
     "https://www.butterflyexplorers.com/p/butterflies-of-panama.html"
 ];
 
-// Debounce function to improve filter performance
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Initialize the map with performance optimizations
+// Initialize the map
 function initMap() {
     map = L.map('map', {
-        // Performance optimizations
-        preferCanvas: true,          // Use Canvas renderer for better performance
-        zoomAnimation: true,         // Enable smooth zoom
-        fadeAnimation: true,         // Enable fade animations
-        markerZoomAnimation: true,   // Smooth marker animations
-        worldCopyJump: true,
-        maxZoom: 18,
-        minZoom: 3,
-        // Additional performance tweaks
-        zoomSnap: 0.5,           // Smoother zoom levels
-        zoomDelta: 0.5,          // Smaller zoom steps
-        wheelPxPerZoomLevel: 120, // Smoother mouse wheel zoom
-        bounceAtZoomLimits: false, // Disable bounce for smoother feel
-        inertia: true,           // Enable map momentum
-        inertiaDeceleration: 3000, // Smooth deceleration
-        inertiaMaxSpeed: 3000   // Max momentum speed
-    }).setView([39.8283, -98.5795], 4); // Center on US
+        preferCanvas: true,
+        zoomAnimation: true,
+        fadeAnimation: true,
+        markerZoomAnimation: true
+    }).setView([39.8283, -98.5795], 4);
 
-    // Use a faster tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18,
-        updateWhenIdle: true,        // Only update when map stops moving
-        updateWhenZooming: false,    // Don't update while zooming
-        keepBuffer: 2                // Keep more tiles in memory
+        attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
     markerGroup = L.layerGroup().addTo(map);
 
-    // Add species filter functionality with debouncing
     const speciesFilter = document.getElementById('speciesFilter');
     if (speciesFilter) {
-        speciesFilter.addEventListener('input', debounce(filterObservations, 300));
+        speciesFilter.addEventListener('input', filterObservations);
     }
 }
 
-// Create custom round markers like iNaturalist
-function createCustomMarker(lat, lng, species, commonName, qualityGrade = 'research') {
-    // Different colors based on quality/type
-    const colors = {
-        research: '#28a745',     // Green for research grade
-        needs_id: '#ffc107',     // Yellow for needs ID
-        casual: '#6c757d',       // Gray for casual
-        endemic: '#dc3545',      // Red for endemic species
-        rare: '#6f42c1'         // Purple for rare species
-    };
-    
-    const color = colors[qualityGrade] || colors.research;
-    
-    // Create custom round marker
-    const marker = L.circleMarker([lat, lng], {
-        radius: 6,                    // Small round markers
-        fillColor: color,
-        color: '#ffffff',             // White border
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.8
-    });
-    
-    return marker;
-}
-
-// Updated parseCoordinates function with decimal seconds support
 function parseCoordinates(text) {
     if (!text) return null;
 
-    console.log('Parsing coordinates from:', text.substring(0, 100) + '...'); // Debug log
+    console.log('Parsing coordinates from:', text.substring(0, 100) + '...');
 
-    // Decode HTML entities first - including degree symbol
     const decodedText = text
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
@@ -108,39 +48,26 @@ function parseCoordinates(text) {
         .replace(/&quot;/g, '"')
         .replace(/&#176;/g, '°');
     
-    // Pattern for coordinates - ENHANCED with decimal coordinate support
     const coordPatterns = [
-        // DMS format with decimal seconds support
         /\(([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([NS])\s*([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([EW])[^)]*\)/,
         /\(([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([NS])\s+([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([EW])[^)]*\)/,
         /([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([NS])\s+([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([EW])/,
         /([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([NS])([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([EW])/,
         /\(([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([NS])\s*,?\s*([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([EW])/,
-        
-        // Decimal degrees with direction indicators
         /\(([0-9.-]+)[°\s]*([NS])[,\s]+([0-9.-]+)[°\s]*([EW])/,
         /([0-9.-]+)[°\s]*([NS])[,\s]+([0-9.-]+)[°\s]*([EW])/,
-        
-        // NEW: Plain decimal coordinates (latitude, longitude) - handles negative numbers
         /\(?(-?[0-9]+\.[0-9]+)\s*,\s*(-?[0-9]+\.[0-9]+)\)?/,
-        
-        // NEW: Decimal coordinates with parentheses
         /\((-?[0-9]+\.[0-9]+)\s*,\s*(-?[0-9]+\.[0-9]+)\)/,
-        
-        // NEW: Space-separated decimal coordinates
         /(-?[0-9]+\.[0-9]+)\s+(-?[0-9]+\.[0-9]+)/,
-        
-        // Fallback: any two decimal numbers that could be coordinates
         /([0-9]+(?:\.[0-9]+)?)[°\s]*[NS]?[,\s]+([0-9]+(?:\.[0-9]+)?)[°\s]*[EW]?/
     ];
 
     for (let pattern of coordPatterns) {
         const match = decodedText.match(pattern);
         if (match) {
-            console.log('Coordinate match found:', match); // Debug log
+            console.log('Coordinate match found:', match);
             
             if (match.length >= 8) {
-                // DMS format with decimal seconds support
                 const latDeg = parseInt(match[1]);
                 const latMin = parseInt(match[2]);
                 const latSec = parseFloat(match[3]);
@@ -160,7 +87,6 @@ function parseCoordinates(text) {
                 console.log('Parsed DMS coordinates:', [lat, lon]);
                 return [lat, lon];
             } else if (match.length >= 4) {
-                // Decimal format with direction indicators
                 let lat = parseFloat(match[1]);
                 const latDir = match[2];
                 let lon = parseFloat(match[3]);
@@ -172,11 +98,9 @@ function parseCoordinates(text) {
                 console.log('Parsed decimal coordinates with directions:', [lat, lon]);
                 return [lat, lon];
             } else if (match.length >= 3) {
-                // Plain decimal coordinates (new patterns)
                 const lat = parseFloat(match[1]);
                 const lon = parseFloat(match[2]);
                 
-                // Validate coordinate ranges
                 if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
                     console.log('Parsed plain decimal coordinates:', [lat, lon]);
                     return [lat, lon];
@@ -189,13 +113,11 @@ function parseCoordinates(text) {
     return null;
 }
 
-// Extract observation data from HTML content
 function extractObservations(htmlContent, sourceUrl) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlContent, 'text/html');
     const foundObservations = [];
 
-    // Find all image links with data-title attributes
     const imageLinks = doc.querySelectorAll('a[data-title]');
     console.log(`Found ${imageLinks.length} image links with data-title in ${getPageName(sourceUrl)}`);
 
@@ -204,12 +126,10 @@ function extractObservations(htmlContent, sourceUrl) {
         const img = link.querySelector('img');
         
         if (dataTitle && img) {
-            console.log(`Processing image ${index + 1}:`, dataTitle.substring(0, 100) + '...'); // Debug log
+            console.log(`Processing image ${index + 1}:`, dataTitle.substring(0, 100) + '...');
             
-            // Decode HTML entities in data-title
             const decodedTitle = dataTitle.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
             
-            // Parse species and common name - handle both <p4><i> and <i> formats, including broken </a> tags
             let speciesMatch = decodedTitle.match(/<p4><i>(.*?)<\/i>\s*[-–]\s*([^<]+?)<\/a><\/p4>/);
             if (!speciesMatch) {
                 speciesMatch = decodedTitle.match(/<p4><i>(.*?)<\/i>\s*[-–]\s*([^<]+)<\/p4>/);
@@ -229,18 +149,16 @@ function extractObservations(htmlContent, sourceUrl) {
                 console.log('Could not parse species from title');
             }
 
-            // Parse coordinates
             const coordinates = parseCoordinates(decodedTitle);
             
             if (coordinates) {
                 console.log(`Found coordinates: ${coordinates}`);
                 
-                // Extract location name - everything between <br/> and coordinates
                 let location = '';
                 const locationPatterns = [
-                    /<br\/?>\s*([^(]+?)(?:\s+\([0-9])/,  // Location before coordinates
-                    /<br\/?>\s*([^(]+?)$/,               // Location at end
-                    /<br\/?>\s*([^<]+?)\s+\d{4}\/\d{2}\/\d{2}/ // Location before date
+                    /<br\/?>\s*([^(]+?)(?:\s+\([0-9])/,
+                    /<br\/?>\s*([^(]+?)$/,
+                    /<br\/?>\s*([^<]+?)\s+\d{4}\/\d{2}\/\d{2}/
                 ];
                 
                 for (let pattern of locationPatterns) {
@@ -251,14 +169,12 @@ function extractObservations(htmlContent, sourceUrl) {
                     }
                 }
 
-                // Extract date
                 const dateMatch = decodedTitle.match(/(\d{4}\/\d{2}\/\d{2})/);
                 let date = '';
                 if (dateMatch) {
                     date = dateMatch[1];
                 }
 
-                // Extract photographer
                 const photographerMatch = decodedTitle.match(/©\s*([^&]+(?:&[^&]+)*)/);
                 let photographer = '';
                 if (photographerMatch) {
@@ -289,7 +205,6 @@ function extractObservations(htmlContent, sourceUrl) {
     return foundObservations;
 }
 
-// Robust loading function with multiple proxy fallbacks and retry logic
 async function loadObservations() {
     if (isLoading) {
         console.log('Already loading, skipping duplicate request');
@@ -308,7 +223,6 @@ async function loadObservations() {
     observations = [];
     clearMap();
 
-    // Better proxy services with multiple fallbacks
     const proxyServices = [
         {
             url: 'https://corsproxy.io/?',
@@ -330,7 +244,7 @@ async function loadObservations() {
 
     let totalLoaded = 0;
     const errors = [];
-    const maxRetries = 2; // Reduced retries to speed up
+    const maxRetries = 2;
 
     async function fetchWithFallbacks(url) {
         for (let proxyIndex = 0; proxyIndex < proxyServices.length; proxyIndex++) {
@@ -342,7 +256,7 @@ async function loadObservations() {
                     console.log(`Trying proxy ${proxyIndex + 1}, attempt ${retry + 1}:`, proxy.url);
                     
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+                    const timeoutId = setTimeout(() => controller.abort(), 20000);
                     
                     const response = await fetch(proxyUrl, {
                         signal: controller.signal,
@@ -357,7 +271,6 @@ async function loadObservations() {
                     if (response.ok) {
                         let content;
                         
-                        // Handle different proxy response formats
                         if (proxy.type === 'json') {
                             const data = await response.json();
                             content = data.contents || data.body;
@@ -365,7 +278,7 @@ async function loadObservations() {
                             content = await response.text();
                         }
                         
-                        if (content && content.length > 1000) { // Basic validation
+                        if (content && content.length > 1000) {
                             console.log(`✅ Success with proxy ${proxyIndex + 1} on attempt ${retry + 1}`);
                             return content;
                         } else {
@@ -379,7 +292,6 @@ async function loadObservations() {
                     console.log(`❌ Proxy ${proxyIndex + 1}, attempt ${retry + 1} failed:`, error.message);
                     
                     if (retry < maxRetries - 1) {
-                        // Wait before retrying (shorter delays)
                         const delay = 1000 + (retry * 1000);
                         console.log(`Waiting ${delay}ms before retry...`);
                         await new Promise(resolve => setTimeout(resolve, delay));
@@ -391,7 +303,6 @@ async function loadObservations() {
         throw new Error('All proxies and retries failed');
     }
 
-    // Process each URL with robust fetching
     for (let i = 0; i < sourceUrls.length; i++) {
         const url = sourceUrls[i];
         const pageName = getPageName(url);
@@ -411,7 +322,6 @@ async function loadObservations() {
             
             console.log(`✅ ${pageName}: ${siteObservations.length} observations (Total: ${totalLoaded})`);
             
-            // Update loading status with progress
             if (loadingDiv) {
                 loadingDiv.textContent = `Loaded ${pageName} - ${totalLoaded} observations found so far...`;
             }
@@ -420,24 +330,20 @@ async function loadObservations() {
             console.error(`❌ Failed to load ${pageName}:`, error.message);
             errors.push(`${pageName}: ${error.message}`);
             
-            // Continue with other URLs even if one fails
             if (loadingDiv) {
                 loadingDiv.textContent = `Failed to load ${pageName}, continuing with others...`;
             }
         }
 
-        // Shorter delay between requests
         if (i < sourceUrls.length - 1) {
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
 
-    // Finish loading
     if (loadingDiv) {
         loadingDiv.style.display = 'none';
     }
 
-    // Show results and errors
     console.log(`\n=== LOADING COMPLETE ===`);
     console.log(`Successfully loaded: ${totalLoaded} observations`);
     console.log(`Failed pages: ${errors.length}`);
@@ -445,7 +351,6 @@ async function loadObservations() {
     if (errors.length > 0) {
         console.log('Errors:', errors);
         
-        // Show error notification but don't block the UI
         const errorDiv = document.createElement('div');
         errorDiv.style.cssText = `
             background: #fff3cd; 
@@ -468,7 +373,6 @@ async function loadObservations() {
             container.insertBefore(errorDiv, document.getElementById('map'));
         }
         
-        // Auto-remove after 15 seconds
         setTimeout(() => {
             if (errorDiv.parentElement) {
                 errorDiv.remove();
@@ -479,13 +383,11 @@ async function loadObservations() {
     displayObservations();
     isLoading = false;
     
-    // If we got some observations, consider it a success
     if (totalLoaded > 0) {
         console.log(`✅ Successfully loaded butterfly map with ${totalLoaded} observations!`);
     } else {
         console.log('⚠️ No observations loaded - all sources may be down');
         
-        // Show retry option
         if (loadingDiv) {
             loadingDiv.style.display = 'block';
             loadingDiv.innerHTML = `
@@ -500,52 +402,36 @@ async function loadObservations() {
     }
 }
 
-// Optimized display function with performance improvements and round markers
 function displayObservations() {
     markerGroup.clearLayers();
 
     const filteredObs = getCurrentFilteredObservations();
 
     filteredObs.forEach(obs => {
-        // Determine marker quality based on data completeness
-        let qualityGrade = 'casual';
-        if (obs.species !== 'Unknown Species' && obs.location && obs.date) {
-            qualityGrade = 'research';
-        } else if (obs.species !== 'Unknown Species') {
-            qualityGrade = 'needs_id';
-        }
-        
-        // Create custom round marker instead of default icon
-        const marker = createCustomMarker(
-            obs.coordinates[0], 
-            obs.coordinates[1], 
-            obs.species, 
-            obs.commonName,
-            qualityGrade
-        );
+        // Create round markers like iNaturalist
+        const marker = L.circleMarker(obs.coordinates, {
+            radius: 6,
+            fillColor: '#28a745',
+            color: '#ffffff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.8
+        });
 
         const popupContent = `
-            <div class="butterfly-popup">
+            <div>
                 <div class="popup-species">${obs.species}</div>
                 <div class="popup-common">${obs.commonName}</div>
-                ${obs.imageUrl ? `<img src="${obs.imageUrl}" class="popup-image" alt="${obs.species}" loading="lazy" onerror="this.style.display='none'">` : ''}
-                <div class="popup-details">
-                    <div class="popup-location">📍 ${obs.location}</div>
-                    ${obs.date ? `<div class="popup-date">📅 ${obs.date}</div>` : ''}
-                    ${obs.photographer ? `<div class="popup-photographer">📷 ${obs.photographer}</div>` : ''}
-                </div>
+                ${obs.imageUrl ? `<img src="${obs.imageUrl}" class="popup-image" alt="${obs.species}" onerror="this.style.display='none'">` : ''}
+                <div class="popup-location">📍 ${obs.location}</div>
+                ${obs.date ? `<div class="popup-date">📅 ${obs.date}</div>` : ''}
+                ${obs.photographer ? `<div class="popup-date">📷 ${obs.photographer}</div>` : ''}
             </div>
         `;
 
-        marker.bindPopup(popupContent, {
-            maxWidth: 300,
-            closeButton: true,
-            autoPan: true,
-            keepInView: true,
-            className: 'custom-popup'
-        });
+        marker.bindPopup(popupContent);
         
-        // Add hover effects for better UX
+        // Add hover effects
         marker.on('mouseover', function(e) {
             this.setStyle({
                 radius: 8,
@@ -563,7 +449,6 @@ function displayObservations() {
         marker.addTo(markerGroup);
     });
 
-    // Fit map to show all markers
     if (filteredObs.length > 0) {
         const group = new L.featureGroup(markerGroup.getLayers());
         map.fitBounds(group.getBounds().pad(0.1));
@@ -572,12 +457,10 @@ function displayObservations() {
     updateStats();
 }
 
-// Filter observations based on species filter
 function filterObservations() {
     displayObservations();
 }
 
-// Get currently filtered observations
 function getCurrentFilteredObservations() {
     const speciesFilterElement = document.getElementById('speciesFilter');
     const speciesFilter = speciesFilterElement ? speciesFilterElement.value.toLowerCase() : '';
@@ -592,7 +475,6 @@ function getCurrentFilteredObservations() {
     );
 }
 
-// Clear the map
 function clearMap() {
     if (markerGroup) {
         markerGroup.clearLayers();
@@ -600,7 +482,6 @@ function clearMap() {
     updateStats();
 }
 
-// Update statistics
 function updateStats() {
     const filteredObs = getCurrentFilteredObservations();
     const uniqueSpecies = new Set(filteredObs.map(obs => obs.species)).size;
@@ -637,7 +518,6 @@ function updateStats() {
     }
 }
 
-// Get page name from URL
 function getPageName(url) {
     const pageNames = {
         'butterflies-of-texas.html': 'Texas',
@@ -656,11 +536,9 @@ function getPageName(url) {
     return 'Unknown';
 }
 
-// Initialize the application and AUTO-LOAD data
 function autoClickLoadButton() {
     console.log('=== ATTEMPTING AUTO-CLICK OF LOAD BUTTON ===');
     
-    // Find the load button by its onclick attribute
     const buttons = document.querySelectorAll('button');
     let loadButton = null;
     
@@ -689,11 +567,9 @@ function autoClickLoadButton() {
     }
 }
 
-// Simple initialization
 function initializeMapSimple() {
     console.log('=== SIMPLE GITHUB PAGES INITIALIZATION ===');
     
-    // Initialize map if not already done
     if (typeof map === 'undefined') {
         const mapDiv = document.getElementById('map');
         if (mapDiv && typeof L !== 'undefined') {
@@ -705,7 +581,6 @@ function initializeMapSimple() {
         }
     }
     
-    // Try auto-clicking the load button
     if (observations.length === 0 && !isLoading) {
         return autoClickLoadButton();
     }
@@ -713,27 +588,22 @@ function initializeMapSimple() {
     return true;
 }
 
-// Multiple attempts with the simple approach
 console.log('Setting up auto-load for GitHub Pages...');
 
-// Try immediately if document is ready
 if (document.readyState !== 'loading') {
     setTimeout(initializeMapSimple, 500);
 }
 
-// Try after DOM content loaded
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, attempting auto-load...');
     setTimeout(initializeMapSimple, 500);
 });
 
-// Try after window fully loads
 window.addEventListener('load', () => {
     console.log('Window loaded, attempting auto-load...');
     setTimeout(initializeMapSimple, 500);
 });
 
-// Backup attempts
 setTimeout(() => {
     console.log('Backup attempt 1 (2s)');
     initializeMapSimple();
@@ -749,13 +619,11 @@ setTimeout(() => {
     initializeMapSimple();
 }, 7000);
 
-// Manual refresh function for the button
 function refreshMap() {
     console.log('Manual refresh triggered');
     loadObservations();
 }
 
-// Debug function
 function debugGitHub() {
     console.log('=== GITHUB DEBUG ===');
     console.log('Document ready:', document.readyState);
@@ -766,5 +634,4 @@ function debugGitHub() {
     console.log('Load button found:', !!document.querySelector('button[onclick*="loadObservations"]'));
 }
 
-// Run debug after a delay
 setTimeout(debugGitHub, 3000);
