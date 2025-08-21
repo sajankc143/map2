@@ -15,7 +15,7 @@ const sourceUrls = [
     "https://www.butterflyexplorers.com/p/butterflies-of-panama.html"
 ];
 
-// Here's the complete updated initMap function:
+// Enhanced initMap function with satellite/normal mode toggle
 function initMap() {
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     
@@ -26,17 +26,127 @@ function initMap() {
         markerZoomAnimation: true,
         tap: true,
         touchZoom: true,
-        tapTolerance: isTouchDevice ? 20 : 10,  // Only increase tolerance on mobile
+        tapTolerance: isTouchDevice ? 20 : 10,
         maxTouchPoints: 2,
         bounceAtZoomLimits: false,
-        // Fixed zoom settings - only slow down on mobile if needed
-        zoomSnap: isTouchDevice ? 0.5 : 1,      // Normal zoom snap on desktop
-        zoomDelta: isTouchDevice ? 0.5 : 1      // Normal zoom delta on desktop
+        zoomSnap: isTouchDevice ? 0.5 : 1,
+        zoomDelta: isTouchDevice ? 0.5 : 1
     }).setView([39.8283, -98.5795], 4);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+    // Define different tile layers
+    const baseLayers = {
+        "Normal": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18,
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            keepBuffer: 2
+        }),
+        
+        "Satellite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri, Maxar, Earthstar Geographics',
+            maxZoom: 18,
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            keepBuffer: 2
+        }),
+        
+        "Terrain": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenTopoMap contributors',
+            maxZoom: 17,
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            keepBuffer: 2
+        }),
+        
+        "Dark": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© CartoDB contributors',
+            maxZoom: 19,
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            keepBuffer: 2
+        })
+    };
+
+    // Add default layer (Normal)
+    baseLayers["Normal"].addTo(map);
+
+    // Add layer control
+    const layerControl = L.control.layers(baseLayers, null, {
+        position: 'topright',
+        collapsed: false
     }).addTo(map);
+
+    // Create custom toggle button (alternative to layer control)
+    const mapToggleControl = L.Control.extend({
+        options: {
+            position: 'topleft'
+        },
+
+        onAdd: function(map) {
+            const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+            
+            container.style.cssText = `
+                background: rgba(255, 255, 255, 0.9);
+                width: 120px;
+                height: 40px;
+                border-radius: 8px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 12px;
+                color: #333;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                transition: all 0.3s ease;
+            `;
+            
+            container.innerHTML = '🗺️ Normal';
+            
+            let currentLayer = 'Normal';
+            
+            container.onclick = function() {
+                // Cycle through map types
+                const layerKeys = Object.keys(baseLayers);
+                const currentIndex = layerKeys.indexOf(currentLayer);
+                const nextIndex = (currentIndex + 1) % layerKeys.length;
+                const nextLayer = layerKeys[nextIndex];
+                
+                // Remove current layer and add new one
+                map.removeLayer(baseLayers[currentLayer]);
+                map.addLayer(baseLayers[nextLayer]);
+                
+                // Update button
+                currentLayer = nextLayer;
+                const icons = {
+                    'Normal': '🗺️',
+                    'Satellite': '🛰️',
+                    'Terrain': '🏔️',
+                    'Dark': '🌙'
+                };
+                container.innerHTML = `${icons[nextLayer]} ${nextLayer}`;
+                
+                // Update button style based on layer
+                if (nextLayer === 'Dark') {
+                    container.style.background = 'rgba(50, 50, 50, 0.9)';
+                    container.style.color = '#fff';
+                } else {
+                    container.style.background = 'rgba(255, 255, 255, 0.9)';
+                    container.style.color = '#333';
+                }
+            };
+            
+            // Prevent map interaction when clicking the control
+            L.DomEvent.disableClickPropagation(container);
+            
+            return container;
+        }
+    });
+
+    // Add the custom toggle control
+    map.addControl(new mapToggleControl());
 
     markerGroup = L.layerGroup().addTo(map);
     
@@ -46,6 +156,32 @@ function initMap() {
     const speciesFilter = document.getElementById('speciesFilter');
     if (speciesFilter) {
         speciesFilter.addEventListener('input', filterObservations);
+    }
+}
+
+// Alternative: Simple toggle function (if you prefer a basic button approach)
+function toggleMapLayer() {
+    // This is a simpler approach - you can call this from any button
+    const currentUrl = map._layers[Object.keys(map._layers)[0]]._url;
+    
+    if (currentUrl.includes('openstreetmap')) {
+        // Switch to satellite
+        map.eachLayer(layer => {
+            if (layer._url) map.removeLayer(layer);
+        });
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri, Maxar, Earthstar Geographics',
+            maxZoom: 18
+        }).addTo(map);
+    } else {
+        // Switch back to normal
+        map.eachLayer(layer => {
+            if (layer._url) map.removeLayer(layer);
+        });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18
+        }).addTo(map);
     }
 }
 function parseCoordinates(text) {
