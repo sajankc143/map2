@@ -21,7 +21,10 @@ function initMap() {
         preferCanvas: true,
         zoomAnimation: true,
         fadeAnimation: true,
-        markerZoomAnimation: true
+        markerZoomAnimation: true,
+        tap: true,              // Enable tap events for mobile
+        touchZoom: true,        // Enable touch zoom
+        tapTolerance: 15        // Increase tap tolerance for mobile
     }).setView([39.8283, -98.5795], 4);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -405,8 +408,7 @@ async function loadObservations() {
     }
 }
 
-// Replace the displayObservations function with this updated version:
-
+// Mobile-friendly displayObservations function:
 function displayObservations() {
     markerGroup.clearLayers();
 
@@ -436,23 +438,49 @@ function displayObservations() {
 
         marker.bindPopup(popupContent);
         
-        // Smooth hover effects with orange theme
-        marker.on('mouseover', function(e) {
-            this.setStyle({
-                radius: getMarkerRadius() + 2, // Slightly bigger on hover
-                weight: 3,
-                fillColor: '#ff6b35',          // Slightly different orange on hover
-                fillOpacity: 0.95
-            });
-        });
+        // Mobile-friendly event handling
+        let isHovering = false;
+        let hoverTimeout;
         
-        marker.on('mouseout', function(e) {
-            this.setStyle({
-                radius: getMarkerRadius(),
-                weight: 2,
-                fillColor: '#ff8c00',          // Back to original orange
-                fillOpacity: 0.85
+        // Check if it's a touch device
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        
+        if (!isTouchDevice) {
+            // Desktop hover effects only
+            marker.on('mouseover', function(e) {
+                if (!isHovering) {
+                    isHovering = true;
+                    this.setStyle({
+                        radius: getMarkerRadius() + 2, // Slightly bigger on hover
+                        weight: 3,
+                        fillColor: '#ff6b35',          // Slightly different orange on hover
+                        fillOpacity: 0.95
+                    });
+                }
             });
+            
+            marker.on('mouseout', function(e) {
+                isHovering = false;
+                clearTimeout(hoverTimeout);
+                hoverTimeout = setTimeout(() => {
+                    if (!isHovering) {
+                        this.setStyle({
+                            radius: getMarkerRadius(),
+                            weight: 2,
+                            fillColor: '#ff8c00',          // Back to original orange
+                            fillOpacity: 0.85
+                        });
+                    }
+                }, 100);
+            });
+        }
+        
+        // Click/tap event for both desktop and mobile
+        marker.on('click', function(e) {
+            // Ensure popup opens on click/tap
+            if (!this.isPopupOpen()) {
+                this.openPopup();
+            }
         });
 
         // Store marker for zoom updates
