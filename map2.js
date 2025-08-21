@@ -15,7 +15,7 @@ const sourceUrls = [
     "https://www.butterflyexplorers.com/p/butterflies-of-panama.html"
 ];
 
-// Initialize the map
+// Here's the complete updated initMap function:
 function initMap() {
     map = L.map('map', {
         preferCanvas: true,
@@ -29,6 +29,9 @@ function initMap() {
     }).addTo(map);
 
     markerGroup = L.layerGroup().addTo(map);
+    
+    // Add zoom event listener for responsive marker sizing
+    map.on('zoomend', updateMarkerSizes);
 
     const speciesFilter = document.getElementById('speciesFilter');
     if (speciesFilter) {
@@ -402,20 +405,22 @@ async function loadObservations() {
     }
 }
 
+// Replace the displayObservations function with this updated version:
+
 function displayObservations() {
     markerGroup.clearLayers();
 
     const filteredObs = getCurrentFilteredObservations();
 
     filteredObs.forEach(obs => {
-        // Create round markers like iNaturalist
+        // Create round markers with orange color for better visibility
         const marker = L.circleMarker(obs.coordinates, {
-            radius: 6,
-            fillColor: '#28a745',
-            color: '#ffffff',
+            radius: getMarkerRadius(), // Dynamic radius based on zoom
+            fillColor: '#ff8c00',     // Bright orange (DarkOrange)
+            color: '#ffffff',         // White border
             weight: 2,
             opacity: 1,
-            fillOpacity: 0.8
+            fillOpacity: 0.85        // Slightly more opaque for visibility
         });
 
         const popupContent = `
@@ -431,21 +436,27 @@ function displayObservations() {
 
         marker.bindPopup(popupContent);
         
-        // Add hover effects
+        // Smooth hover effects with orange theme
         marker.on('mouseover', function(e) {
             this.setStyle({
-                radius: 8,
-                weight: 3
+                radius: getMarkerRadius() + 2, // Slightly bigger on hover
+                weight: 3,
+                fillColor: '#ff6b35',          // Slightly different orange on hover
+                fillOpacity: 0.95
             });
         });
         
         marker.on('mouseout', function(e) {
             this.setStyle({
-                radius: 6,
-                weight: 2
+                radius: getMarkerRadius(),
+                weight: 2,
+                fillColor: '#ff8c00',          // Back to original orange
+                fillOpacity: 0.85
             });
         });
 
+        // Store marker for zoom updates
+        marker._butterflyMarker = true;
         marker.addTo(markerGroup);
     });
 
@@ -455,6 +466,36 @@ function displayObservations() {
     }
 
     updateStats();
+}
+
+// Add this new function to calculate marker size based on zoom level
+function getMarkerRadius() {
+    if (!map) return 6; // Default size if map not initialized
+    
+    const zoom = map.getZoom();
+    
+    // Scale markers based on zoom level (smooth progression)
+    if (zoom <= 4) return 4;        // Very zoomed out - tiny markers
+    else if (zoom <= 6) return 5;   // Zoomed out - small markers
+    else if (zoom <= 8) return 6;   // Medium zoom - normal markers
+    else if (zoom <= 10) return 7;  // Zoomed in - slightly bigger
+    else if (zoom <= 12) return 8;  // More zoomed in - bigger
+    else if (zoom <= 14) return 9;  // Very zoomed in - large
+    else return 10;                 // Maximum zoom - largest markers
+}
+
+// Add this function to update marker sizes when zoom changes (smooth)
+function updateMarkerSizes() {
+    const newRadius = getMarkerRadius();
+    
+    markerGroup.eachLayer(function(marker) {
+        if (marker._butterflyMarker && marker.setRadius) {
+            // Smooth transition using CSS transitions
+            marker.setStyle({
+                radius: newRadius
+            });
+        }
+    });
 }
 
 function filterObservations() {
