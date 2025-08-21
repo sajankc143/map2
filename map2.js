@@ -17,18 +17,21 @@ const sourceUrls = [
 
 // Here's the complete updated initMap function:
 function initMap() {
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    
     map = L.map('map', {
         preferCanvas: true,
         zoomAnimation: true,
         fadeAnimation: true,
         markerZoomAnimation: true,
-        tap: true,                    // Enable tap events for mobile
-        touchZoom: true,             // Enable touch zoom
-        tapTolerance: 20,            // Increased tap tolerance for mobile (was 15)
-        maxTouchPoints: 2,           // Allow 2-finger gestures
-        bounceAtZoomLimits: false,   // Smoother zoom experience
-        zoomSnap: 0.25,             // Finer zoom control
-        zoomDelta: 0.25             // Smaller zoom steps
+        tap: true,
+        touchZoom: true,
+        tapTolerance: isTouchDevice ? 20 : 10,  // Only increase tolerance on mobile
+        maxTouchPoints: 2,
+        bounceAtZoomLimits: false,
+        // Fixed zoom settings - only slow down on mobile if needed
+        zoomSnap: isTouchDevice ? 0.5 : 1,      // Normal zoom snap on desktop
+        zoomDelta: isTouchDevice ? 0.5 : 1      // Normal zoom delta on desktop
     }).setView([39.8283, -98.5795], 4);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -445,48 +448,26 @@ function displayObservations() {
             </div>
         `;
 
-        // Enhanced popup options for mobile
+        // Fixed popup options - popup closes properly now
         marker.bindPopup(popupContent, {
             maxWidth: isTouchDevice ? 280 : 300,
             closeButton: true,
             autoPan: true,
             keepInView: true,
             className: 'custom-popup',
-            autoPanPadding: [10, 10],     // Better mobile positioning
-            closeOnClick: false           // Prevent accidental closing on mobile
+            autoPanPadding: [10, 10],
+            closeOnClick: true,          // FIXED: Allow closing on map click
+            closeOnEscapeKey: true       // FIXED: Allow closing with Escape key
         });
         
-        // Enhanced mobile-friendly event handling
+        // Simplified mobile-friendly event handling
         let isHovering = false;
         let hoverTimeout;
-        let touchStartTime = 0;
         
         if (isTouchDevice) {
-            // Mobile/touch device events
-            marker.on('touchstart', function(e) {
-                touchStartTime = Date.now();
-                e.originalEvent.preventDefault(); // Prevent default touch behavior
-            });
-            
-            marker.on('touchend', function(e) {
-                const touchDuration = Date.now() - touchStartTime;
-                
-                // Only trigger on quick taps (not long presses or drags)
-                if (touchDuration < 500) {
-                    e.originalEvent.preventDefault();
-                    
-                    // Force popup to open
-                    setTimeout(() => {
-                        if (!this.isPopupOpen()) {
-                            this.openPopup();
-                        }
-                    }, 50); // Small delay to ensure proper handling
-                }
-            });
-            
-            // Also handle click as fallback
+            // Simplified mobile events - just use click
             marker.on('click', function(e) {
-                e.originalEvent.preventDefault();
+                // Don't prevent default - let Leaflet handle popup closing
                 if (!this.isPopupOpen()) {
                     this.openPopup();
                 }
