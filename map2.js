@@ -22,9 +22,13 @@ function initMap() {
         zoomAnimation: true,
         fadeAnimation: true,
         markerZoomAnimation: true,
-        tap: true,              // Enable tap events for mobile
-        touchZoom: true,        // Enable touch zoom
-        tapTolerance: 15        // Increase tap tolerance for mobile
+        tap: true,                    // Enable tap events for mobile
+        touchZoom: true,             // Enable touch zoom
+        tapTolerance: 20,            // Increased tap tolerance for mobile (was 15)
+        maxTouchPoints: 2,           // Allow 2-finger gestures
+        bounceAtZoomLimits: false,   // Smoother zoom experience
+        zoomSnap: 0.25,             // Finer zoom control
+        zoomDelta: 0.25             // Smaller zoom steps
     }).setView([39.8283, -98.5795], 4);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -41,7 +45,6 @@ function initMap() {
         speciesFilter.addEventListener('input', filterObservations);
     }
 }
-
 function parseCoordinates(text) {
     if (!text) return null;
 
@@ -413,16 +416,22 @@ function displayObservations() {
     markerGroup.clearLayers();
 
     const filteredObs = getCurrentFilteredObservations();
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
     filteredObs.forEach(obs => {
-        // Create round markers with orange color for better visibility
+        // Create round markers with orange color and mobile-optimized sizes
+        const markerRadius = getMarkerRadius();
         const marker = L.circleMarker(obs.coordinates, {
-            radius: getMarkerRadius(), // Dynamic radius based on zoom
+            radius: markerRadius,
             fillColor: '#ff8c00',     // Bright orange (DarkOrange)
             color: '#ffffff',         // White border
-            weight: 2,
+            weight: isTouchDevice ? 3 : 2,  // Thicker border on mobile for visibility
             opacity: 1,
-            fillOpacity: 0.85        // Slightly more opaque for visibility
+            fillOpacity: 0.85,
+            // Mobile-specific options
+            interactive: true,        // Ensure marker is interactive
+            bubblingMouseEvents: false, // Prevent event bubbling issues
+            pane: 'markerPane'       // Ensure proper layering
         });
 
         const popupContent = `
@@ -436,24 +445,62 @@ function displayObservations() {
             </div>
         `;
 
-        marker.bindPopup(popupContent);
+        // Enhanced popup options for mobile
+        marker.bindPopup(popupContent, {
+            maxWidth: isTouchDevice ? 280 : 300,
+            closeButton: true,
+            autoPan: true,
+            keepInView: true,
+            className: 'custom-popup',
+            autoPanPadding: [10, 10],     // Better mobile positioning
+            closeOnClick: false           // Prevent accidental closing on mobile
+        });
         
-        // Mobile-friendly event handling
+        // Enhanced mobile-friendly event handling
         let isHovering = false;
         let hoverTimeout;
+        let touchStartTime = 0;
         
-        // Check if it's a touch device
-        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-        
-        if (!isTouchDevice) {
-            // Desktop hover effects only
+        if (isTouchDevice) {
+            // Mobile/touch device events
+            marker.on('touchstart', function(e) {
+                touchStartTime = Date.now();
+                e.originalEvent.preventDefault(); // Prevent default touch behavior
+            });
+            
+            marker.on('touchend', function(e) {
+                const touchDuration = Date.now() - touchStartTime;
+                
+                // Only trigger on quick taps (not long presses or drags)
+                if (touchDuration < 500) {
+                    e.originalEvent.preventDefault();
+                    
+                    // Force popup to open
+                    setTimeout(() => {
+                        if (!this.isPopupOpen()) {
+                            this.openPopup();
+                        }
+                    }, 50); // Small delay to ensure proper handling
+                }
+            });
+            
+            // Also handle click as fallback
+            marker.on('click', function(e) {
+                e.originalEvent.preventDefault();
+                if (!this.isPopupOpen()) {
+                    this.openPopup();
+                }
+            });
+            
+        } else {
+            // Desktop events with hover effects
             marker.on('mouseover', function(e) {
                 if (!isHovering) {
                     isHovering = true;
                     this.setStyle({
-                        radius: getMarkerRadius() + 2, // Slightly bigger on hover
+                        radius: getMarkerRadius() + 2,
                         weight: 3,
-                        fillColor: '#ff6b35',          // Slightly different orange on hover
+                        fillColor: '#ff6b35',
                         fillOpacity: 0.95
                     });
                 }
@@ -467,21 +514,20 @@ function displayObservations() {
                         this.setStyle({
                             radius: getMarkerRadius(),
                             weight: 2,
-                            fillColor: '#ff8c00',          // Back to original orange
+                            fillColor: '#ff8c00',
                             fillOpacity: 0.85
                         });
                     }
                 }, 100);
             });
+            
+            // Desktop click event
+            marker.on('click', function(e) {
+                if (!this.isPopupOpen()) {
+                    this.openPopup();
+                }
+            });
         }
-        
-        // Click/tap event for both desktop and mobile
-        marker.on('click', function(e) {
-            // Ensure popup opens on click/tap
-            if (!this.isPopupOpen()) {
-                this.openPopup();
-            }
-        });
 
         // Store marker for zoom updates
         marker._butterflyMarker = true;
@@ -498,29 +544,34 @@ function displayObservations() {
 
 // Add this new function to calculate marker size based on zoom level
 function getMarkerRadius() {
-    if (!map) return 6; // Default size if map not initialized
+    if (!map) return 8; // Larger default size for mobile
     
     const zoom = map.getZoom();
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     
-    // Scale markers based on zoom level (smooth progression)
-    if (zoom <= 4) return 4;        // Very zoomed out - tiny markers
-    else if (zoom <= 6) return 5;   // Zoomed out - small markers
-    else if (zoom <= 8) return 6;   // Medium zoom - normal markers
-    else if (zoom <= 10) return 7;  // Zoomed in - slightly bigger
-    else if (zoom <= 12) return 8;  // More zoomed in - bigger
-    else if (zoom <= 14) return 9;  // Very zoomed in - large
-    else return 10;                 // Maximum zoom - largest markers
+    // Larger markers on mobile devices for better touch targets
+    const mobileBonus = isTouchDevice ? 2 : 0;
+    
+    // Scale markers based on zoom level with mobile-friendly sizes
+    if (zoom <= 4) return 6 + mobileBonus;        // Minimum 6px (8px on mobile)
+    else if (zoom <= 6) return 7 + mobileBonus;   
+    else if (zoom <= 8) return 8 + mobileBonus;   
+    else if (zoom <= 10) return 9 + mobileBonus;  
+    else if (zoom <= 12) return 10 + mobileBonus; 
+    else if (zoom <= 14) return 11 + mobileBonus; 
+    else return 12 + mobileBonus;                  // Maximum size with mobile bonus
 }
 
 // Add this function to update marker sizes when zoom changes (smooth)
 function updateMarkerSizes() {
     const newRadius = getMarkerRadius();
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     
     markerGroup.eachLayer(function(marker) {
         if (marker._butterflyMarker && marker.setRadius) {
-            // Smooth transition using CSS transitions
             marker.setStyle({
-                radius: newRadius
+                radius: newRadius,
+                weight: isTouchDevice ? 3 : 2  // Adjust border thickness too
             });
         }
     });
