@@ -422,19 +422,17 @@ function displayObservations() {
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
     filteredObs.forEach(obs => {
-        // Create round markers with orange color and mobile-optimized sizes
         const markerRadius = getMarkerRadius();
         const marker = L.circleMarker(obs.coordinates, {
             radius: markerRadius,
-            fillColor: '#ff8c00',     // Bright orange (DarkOrange)
-            color: '#ffffff',         // White border
-            weight: isTouchDevice ? 3 : 2,  // Thicker border on mobile for visibility
+            fillColor: '#ff8c00',     
+            color: '#ffffff',         
+            weight: isTouchDevice ? 3 : 2,  
             opacity: 1,
             fillOpacity: 0.85,
-            // Mobile-specific options
-            interactive: true,        // Ensure marker is interactive
-            bubblingMouseEvents: false, // Prevent event bubbling issues
-            pane: 'markerPane'       // Ensure proper layering
+            interactive: true,        
+            bubblingMouseEvents: false, 
+            pane: 'markerPane'       
         });
 
         const popupContent = `
@@ -448,7 +446,6 @@ function displayObservations() {
             </div>
         `;
 
-        // Fixed popup options - popup closes properly now
         marker.bindPopup(popupContent, {
             maxWidth: isTouchDevice ? 280 : 300,
             closeButton: true,
@@ -456,25 +453,33 @@ function displayObservations() {
             keepInView: true,
             className: 'custom-popup',
             autoPanPadding: [10, 10],
-            closeOnClick: true,          // FIXED: Allow closing on map click
-            closeOnEscapeKey: true       // FIXED: Allow closing with Escape key
+            closeOnClick: true,          
+            closeOnEscapeKey: true       
         });
         
-        // Simplified mobile-friendly event handling
         let isHovering = false;
         let hoverTimeout;
         
         if (isTouchDevice) {
-            // Simplified mobile events - just use click
+            // Enhanced mobile click handling - multiple event types for reliability
             marker.on('click', function(e) {
-                // Don't prevent default - let Leaflet handle popup closing
                 if (!this.isPopupOpen()) {
                     this.openPopup();
                 }
             });
             
+            // Add touchstart as backup for maximum zoom reliability
+            marker.on('touchstart', function(e) {
+                const self = this;
+                setTimeout(() => {
+                    if (!self.isPopupOpen()) {
+                        self.openPopup();
+                    }
+                }, 100);
+            });
+            
         } else {
-            // Desktop events with hover effects
+            // Desktop events - unchanged
             marker.on('mouseover', function(e) {
                 if (!isHovering) {
                     isHovering = true;
@@ -502,7 +507,6 @@ function displayObservations() {
                 }, 100);
             });
             
-            // Desktop click event
             marker.on('click', function(e) {
                 if (!this.isPopupOpen()) {
                     this.openPopup();
@@ -510,7 +514,6 @@ function displayObservations() {
             });
         }
 
-        // Store marker for zoom updates
         marker._butterflyMarker = true;
         marker.addTo(markerGroup);
     });
@@ -525,22 +528,31 @@ function displayObservations() {
 
 // Add this new function to calculate marker size based on zoom level
 function getMarkerRadius() {
-    if (!map) return 8; // Larger default size for mobile
+    if (!map) return 6; // Default size
     
     const zoom = map.getZoom();
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     
-    // Larger markers on mobile devices for better touch targets
-    const mobileBonus = isTouchDevice ? 2 : 0;
-    
-    // Scale markers based on zoom level with mobile-friendly sizes
-    if (zoom <= 4) return 6 + mobileBonus;        // Minimum 6px (8px on mobile)
-    else if (zoom <= 6) return 7 + mobileBonus;   
-    else if (zoom <= 8) return 8 + mobileBonus;   
-    else if (zoom <= 10) return 9 + mobileBonus;  
-    else if (zoom <= 12) return 10 + mobileBonus; 
-    else if (zoom <= 14) return 11 + mobileBonus; 
-    else return 12 + mobileBonus;                  // Maximum size with mobile bonus
+    if (isTouchDevice) {
+        // Enhanced mobile scaling - much larger at high zoom levels
+        if (zoom <= 4) return 8;        // Small at low zoom
+        else if (zoom <= 6) return 9;   
+        else if (zoom <= 8) return 10;  
+        else if (zoom <= 10) return 12; 
+        else if (zoom <= 12) return 14; 
+        else if (zoom <= 14) return 16; // Large at high zoom
+        else if (zoom <= 16) return 18; // Very large at max zoom
+        else return 20;                 // Extra large at maximum zoom
+    } else {
+        // Desktop - unchanged, normal sizes
+        if (zoom <= 4) return 4;        
+        else if (zoom <= 6) return 5;   
+        else if (zoom <= 8) return 6;   
+        else if (zoom <= 10) return 7;  
+        else if (zoom <= 12) return 8;  
+        else if (zoom <= 14) return 9;  
+        else return 10;                 // Normal max size for desktop
+    }
 }
 
 // Add this function to update marker sizes when zoom changes (smooth)
