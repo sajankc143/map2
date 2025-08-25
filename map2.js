@@ -171,42 +171,35 @@ function initMap() {
             container.innerHTML = `
                 <div style="margin-bottom: 10px; font-weight: bold; color: black; font-size: 14px;">🦋 Search by Location</div>
                 
-                <div style="margin-bottom: 10px;">
-                    <input type="text" id="locationInput" placeholder="Enter city, state, or coordinates..." 
-                           style="width: 100%; padding: 8px; border: 2px solid #007bff; border-radius: 4px; 
-                                  font-size: 14px; background: white; color: black; box-sizing: border-box;">
-                </div>
+                <input type="text" id="locationInput" placeholder="Enter city, state, or coordinates..." 
+                       style="width: 100%; padding: 8px; border: 1px solid black; border-radius: 4px; 
+                              font-size: 14px; background: white; color: black; margin-bottom: 10px; box-sizing: border-box;">
                 
                 <div style="margin-bottom: 10px; display: flex; gap: 8px; align-items: center;">
-                    <span style="color: black; font-size: 12px; font-weight: bold;">Radius:</span>
-                    <input type="range" id="radiusSlider" min="5" max="200" value="50" 
-                           style="flex: 1;" onchange="updateRadiusDisplay()">
-                    <span id="radiusDisplay" style="color: black; font-size: 12px; font-weight: bold; 
-                                                   background: #007bff; color: white; padding: 4px 8px; 
-                                                   border-radius: 4px;">50 km</span>
+                    <span style="color: black; font-size: 12px;">Radius:</span>
+                    <input type="range" id="radiusSlider" min="5" max="200" value="50" style="flex: 1;" onchange="updateRadiusDisplay()">
+                    <span id="radiusDisplay" style="color: white; background: blue; padding: 4px 8px; border-radius: 4px; font-size: 12px;">50 km</span>
                 </div>
                 
-                <div style="margin-bottom: 10px; display: flex; gap: 8px;">
-                    <button onclick="searchByLocation()" 
-                            style="flex: 1; padding: 10px; background: #28a745; color: white; border: none; 
-                                   border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">
-                        Search
-                    </button>
-                    <button onclick="toggleLocationMode()" id="locationModeBtn"
-                            style="flex: 1; padding: 10px; background: #007bff; color: white; border: none; 
-                                   border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">
-                        Click Mode
-                    </button>
-                </div>
+                <button onclick="searchByLocation()" 
+                        style="width: 100%; padding: 10px; background: green; color: white; border: none; 
+                               border-radius: 4px; cursor: pointer; font-size: 14px; margin-bottom: 8px;">
+                    Search
+                </button>
+                
+                <button onclick="toggleLocationMode()" id="locationModeBtn"
+                        style="width: 100%; padding: 10px; background: blue; color: white; border: none; 
+                               border-radius: 4px; cursor: pointer; font-size: 14px; margin-bottom: 8px;">
+                    Click Mode
+                </button>
                 
                 <button onclick="clearLocationSearch()" 
-                        style="width: 100%; padding: 8px; background: #dc3545; color: white; border: none; 
-                               border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; 
-                               margin-bottom: 10px;">
+                        style="width: 100%; padding: 8px; background: red; color: white; border: none; 
+                               border-radius: 4px; cursor: pointer; font-size: 14px; margin-bottom: 10px;">
                     Clear Search
                 </button>
                 
-                <div id="locationResults" style="background: #f8f9fa; border: 1px solid #dee2e6; 
+                <div id="locationResults" style="background: lightgray; border: 1px solid black; 
                                                   border-radius: 4px; padding: 8px; min-height: 40px; 
                                                   max-height: 120px; overflow-y: auto; color: black; 
                                                   font-size: 13px;"></div>
@@ -258,9 +251,6 @@ function updateRadiusDisplay() {
     const display = document.getElementById('radiusDisplay');
     if (slider && display) {
         display.textContent = slider.value + ' km';
-        display.style.background = slider.value < 50 ? '#007bff' : 
-                                   slider.value < 100 ? '#28a745' : 
-                                   slider.value < 150 ? '#ffc107' : '#dc3545';
         
         // Update existing search circle if it exists
         if (searchCircle) {
