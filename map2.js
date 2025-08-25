@@ -160,64 +160,56 @@ function initMap() {
             const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control location-search-control');
             
             container.style.cssText = `
-                background: rgba(255, 255, 255, 0.95);
-                padding: 10px;
+                background: white;
+                padding: 12px;
                 border-radius: 8px;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                backdrop-filter: blur(10px);
                 min-width: 280px;
+                border: 2px solid #ddd;
             `;
             
             container.innerHTML = `
-                <div style="margin-bottom: 8px; font-weight: bold; color: #333; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);">🦋 Search by Location</div>
-                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                <div style="margin-bottom: 10px; font-weight: bold; color: black; font-size: 14px;">🦋 Search by Location</div>
+                
+                <div style="margin-bottom: 10px;">
                     <input type="text" id="locationInput" placeholder="Enter city, state, or coordinates..." 
-                           style="flex: 1; padding: 8px; border: 2px solid #007bff; border-radius: 6px; font-size: 13px; 
-                                  background: #ffffff; color: #333; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-                                  outline: none; transition: border-color 0.3s ease;" 
-                           onfocus="this.style.borderColor='#28a745'" 
-                           onblur="this.style.borderColor='#007bff'">
+                           style="width: 100%; padding: 8px; border: 2px solid #007bff; border-radius: 4px; 
+                                  font-size: 14px; background: white; color: black; box-sizing: border-box;">
+                </div>
+                
+                <div style="margin-bottom: 10px; display: flex; gap: 8px; align-items: center;">
+                    <span style="color: black; font-size: 12px; font-weight: bold;">Radius:</span>
+                    <input type="range" id="radiusSlider" min="5" max="200" value="50" 
+                           style="flex: 1;" onchange="updateRadiusDisplay()">
+                    <span id="radiusDisplay" style="color: black; font-size: 12px; font-weight: bold; 
+                                                   background: #007bff; color: white; padding: 4px 8px; 
+                                                   border-radius: 4px;">50 km</span>
+                </div>
+                
+                <div style="margin-bottom: 10px; display: flex; gap: 8px;">
                     <button onclick="searchByLocation()" 
-                            style="padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 6px; 
-                                   cursor: pointer; font-size: 13px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                                   transition: all 0.3s ease;" 
-                            onmouseover="this.style.background='#218838'; this.style.transform='translateY(-1px)'" 
-                            onmouseout="this.style.background='#28a745'; this.style.transform='translateY(0)'">
+                            style="flex: 1; padding: 10px; background: #28a745; color: white; border: none; 
+                                   border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">
                         Search
                     </button>
-                </div>
-                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; padding: 6px; 
-                            background: rgba(240,248,255,0.8); border-radius: 4px; border: 1px solid #e1ecf7;">
-                    <label style="font-size: 12px; color: #495057; font-weight: 600; min-width: 45px;">Radius:</label>
-                    <input type="range" id="radiusSlider" min="5" max="200" value="50" 
-                           style="flex: 1; height: 6px; background: linear-gradient(to right, #007bff, #28a745); 
-                                  border-radius: 3px; outline: none; cursor: pointer;" 
-                           onchange="updateRadiusDisplay()">
-                    <span id="radiusDisplay" style="font-size: 12px; color: #495057; font-weight: bold; 
-                                                   min-width: 40px; text-align: center; background: #007bff; 
-                                                   color: white; padding: 2px 6px; border-radius: 12px;">50 km</span>
-                </div>
-                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
-                    <button onclick="clearLocationSearch()" 
-                            style="flex: 1; padding: 6px; background: #dc3545; color: white; border: none; border-radius: 5px; 
-                                   cursor: pointer; font-size: 12px; font-weight: bold; transition: all 0.3s ease;
-                                   box-shadow: 0 2px 4px rgba(0,0,0,0.1);" 
-                            onmouseover="this.style.background='#c82333'" 
-                            onmouseout="this.style.background='#dc3545'">
-                        Clear
-                    </button>
                     <button onclick="toggleLocationMode()" id="locationModeBtn"
-                            style="flex: 1; padding: 6px; background: #007bff; color: white; border: none; border-radius: 5px; 
-                                   cursor: pointer; font-size: 12px; font-weight: bold; transition: all 0.3s ease;
-                                   box-shadow: 0 2px 4px rgba(0,0,0,0.1);" 
-                            onmouseover="this.style.background='#0056b3'" 
-                            onmouseout="this.style.background='#007bff'">
+                            style="flex: 1; padding: 10px; background: #007bff; color: white; border: none; 
+                                   border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">
                         Click Mode
                     </button>
                 </div>
-                <div id="locationResults" style="margin-top: 8px; font-size: 12px; color: #495057; max-height: 120px; 
-                                                  overflow-y: auto; padding: 8px; background: rgba(248,249,250,0.9); 
-                                                  border-radius: 6px; border: 1px solid #e9ecef; min-height: 20px;"></div>
+                
+                <button onclick="clearLocationSearch()" 
+                        style="width: 100%; padding: 8px; background: #dc3545; color: white; border: none; 
+                               border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; 
+                               margin-bottom: 10px;">
+                    Clear Search
+                </button>
+                
+                <div id="locationResults" style="background: #f8f9fa; border: 1px solid #dee2e6; 
+                                                  border-radius: 4px; padding: 8px; min-height: 40px; 
+                                                  max-height: 120px; overflow-y: auto; color: black; 
+                                                  font-size: 13px;"></div>
             `;
             
             // Prevent map interaction when interacting with the control
