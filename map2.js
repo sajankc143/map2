@@ -748,6 +748,7 @@ function getMarkerRadius() {
     if (isTouchDevice) {
         // Enhanced mobile scaling - much larger at high zoom levels
         if (zoom <= 4) return 8;        // Small at low zoom
+        else if (zoom <= 6) return 9;   
         else if (zoom <= 8) return 10;  
         else if (zoom <= 10) return 12; 
         else if (zoom <= 12) return 14; 
@@ -958,5 +959,4 @@ function debugGitHub() {
     console.log('Load button found:', !!document.querySelector('button[onclick*="loadObservations"]'));
 }
 
-setTimeout(debugGitHub, 3000); 6) return 9;   
-        else if (zoom <=
+setTimeout(debugGitHub, 3000);
