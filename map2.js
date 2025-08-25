@@ -195,7 +195,7 @@ function initMap() {
                            onchange="updateRadiusDisplay()">
                     <span id="radiusDisplay" style="font-size: 12px; color: #495057; font-weight: bold; 
                                                    min-width: 40px; text-align: center; background: #007bff; 
-                                                   color: white; padding: 2px 6px; border-radius: 12px;">50 km</span>
+                                                   color: black; padding: 2px 6px; border-radius: 12px;">50 km</span>
                 </div>
                 <div style="display: flex; gap: 5px; margin-bottom: 8px;">
                     <button onclick="clearLocationSearch()" 
@@ -207,7 +207,7 @@ function initMap() {
                         Clear
                     </button>
                     <button onclick="toggleLocationMode()" id="locationModeBtn"
-                            style="flex: 1; padding: 6px; background: #007bff; color: white; border: none; border-radius: 5px; 
+                            style="flex: 1; padding: 6px; background: #007bff; color: black; border: none; border-radius: 5px; 
                                    cursor: pointer; font-size: 12px; font-weight: bold; transition: all 0.3s ease;
                                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);" 
                             onmouseover="this.style.background='#0056b3'" 
