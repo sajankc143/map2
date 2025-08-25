@@ -181,22 +181,22 @@ function initializeLocationSearchControls() {
     
     if (topControlsContainer) {
         const locationSearchHTML = `
-            <div class="location-search-container">
-                <h3>🦋 Search by Location</h3>
-                <div class="location-input-row">
-                    <input type="text" id="locationInput" placeholder="Enter city, state, or coordinates..." />
-                    <button onclick="searchByLocation()" class="search-btn">Search</button>
+            <div class="control-group">
+                <label>Search by Location</label>
+                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                    <input type="text" id="locationInput" placeholder="Enter city, state, or coordinates..." style="flex: 1;" />
+                    <button onclick="searchByLocation()" style="padding: 8px 12px;">Search</button>
                 </div>
-                <div class="radius-control">
-                    <label>Radius:</label>
-                    <input type="range" id="radiusSlider" min="5" max="200" value="50" onchange="updateRadiusDisplay()" />
-                    <span id="radiusDisplay">50 km</span>
+                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+                    <label style="font-size: 12px; min-width: 45px;">Radius:</label>
+                    <input type="range" id="radiusSlider" min="5" max="200" value="50" onchange="updateRadiusDisplay()" style="flex: 1;" />
+                    <span id="radiusDisplay" style="font-size: 12px; min-width: 40px;">50 km</span>
                 </div>
-                <div class="location-buttons">
-                    <button onclick="clearLocationSearch()" class="clear-btn">Clear</button>
-                    <button onclick="toggleLocationMode()" id="locationModeBtn" class="mode-btn">Click Mode</button>
+                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                    <button onclick="clearLocationSearch()" style="flex: 1; padding: 6px;">Clear</button>
+                    <button onclick="toggleLocationMode()" id="locationModeBtn" style="flex: 1; padding: 6px;">Click Mode</button>
                 </div>
-                <div id="locationResults" class="location-results"></div>
+                <div id="locationResults" style="font-size: 12px; color: #666; min-height: 20px;"></div>
             </div>
         `;
         
@@ -361,41 +361,14 @@ function searchAroundPoint(lat, lng, locationName = null) {
         speciesCount[obs.species] = (speciesCount[obs.species] || 0) + 1;
     });
     
-    // Display results
+    // Display results - now much more subtle
     let resultsHtml = '';
     if (nearbyObservations.length > 0) {
         const locationDisplay = locationName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-        resultsHtml = `
-            <div class="results-header">
-                Found ${nearbyObservations.length} observations of ${uniqueSpecies.length} species
-            </div>
-            <div class="results-location">
-                Within ${radiusKm}km of ${locationDisplay}
-            </div>
-            <div class="results-species">
-        `;
-        
-        // Sort species by count (most common first)
-        const sortedSpecies = Object.entries(speciesCount)
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, 10); // Show top 10
-        
-        sortedSpecies.forEach(([species, count]) => {
-            resultsHtml += `<div class="species-item">• ${species} (${count})</div>`;
-        });
-        
-        if (uniqueSpecies.length > 10) {
-            resultsHtml += `<div class="more-species">...and ${uniqueSpecies.length - 10} more species</div>`;
-        }
-        
-        resultsHtml += '</div>';
+        resultsHtml = `Found ${nearbyObservations.length} observations of ${uniqueSpecies.length} species within ${radiusKm}km`;
     } else {
         const locationDisplay = locationName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-        resultsHtml = `
-            <div class="no-results">
-                No observations found within ${radiusKm}km of ${locationDisplay}
-            </div>
-        `;
+        resultsHtml = `No observations found within ${radiusKm}km`;
     }
     
     showLocationResults(resultsHtml);
