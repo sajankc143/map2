@@ -3,7 +3,6 @@ let observations = [];
 let markers = [];
 let markerGroup;
 let isLoading = false;
-let searchCircle = null;
 let geocoder = null;
 
 const sourceUrls = [
@@ -17,7 +16,7 @@ const sourceUrls = [
     "https://www.butterflyexplorers.com/p/butterflies-of-panama.html"
 ];
 
-// Enhanced initMap function with location search capabilities moved to top
+// Enhanced initMap function with simplified location search
 function initMap() {
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     
@@ -155,48 +154,28 @@ function initMap() {
     // Add zoom event listener for responsive marker sizing
     map.on('zoomend', updateMarkerSizes);
 
-    // Initialize click mode as false
-    window.locationClickMode = false;
-
-    // Add click handler for location-based search
-    map.on('click', function(e) {
-        if (window.locationClickMode) {
-            searchAroundPoint(e.latlng.lat, e.latlng.lng);
-        }
-    });
-
     const speciesFilter = document.getElementById('speciesFilter');
     if (speciesFilter) {
         speciesFilter.addEventListener('input', filterObservations);
     }
 
-    // Initialize the location search controls in the top controls area
+    // Initialize the simplified location search controls
     initializeLocationSearchControls();
 }
 
-// New function to initialize location search controls at the top of the page
+// Simplified function to initialize location search controls
 function initializeLocationSearchControls() {
-    // Create location search controls and add them to the top controls area
     const topControlsContainer = document.querySelector('.top-controls');
     
     if (topControlsContainer) {
         const locationSearchHTML = `
             <div class="control-group">
-                <label>Search by Location</label>
-                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                <label>Go to Location</label>
+                <div style="display: flex; gap: 5px;">
                     <input type="text" id="locationInput" placeholder="Enter city, state, or coordinates..." style="flex: 1;" />
-                    <button onclick="searchByLocation()" style="padding: 8px 12px;">Search</button>
+                    <button onclick="searchByLocation()" style="padding: 8px 12px;">Go</button>
                 </div>
-                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
-                    <label style="font-size: 12px; min-width: 45px;">Radius:</label>
-                    <input type="range" id="radiusSlider" min="5" max="200" value="50" onchange="updateRadiusDisplay()" style="flex: 1;" />
-                    <span id="radiusDisplay" style="font-size: 12px; min-width: 40px;">50 km</span>
-                </div>
-                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
-                    <button onclick="clearLocationSearch()" style="flex: 1; padding: 6px;">Clear</button>
-                    <button onclick="toggleLocationMode()" id="locationModeBtn" style="flex: 1; padding: 6px;">Click Mode</button>
-                </div>
-                <div id="locationResults" style="font-size: 12px; color: #666; min-height: 20px;"></div>
+                <div id="locationResults" style="font-size: 12px; color: #666; min-height: 20px; margin-top: 5px;"></div>
             </div>
         `;
         
@@ -214,86 +193,13 @@ function initializeLocationSearchControls() {
     }
 }
 
-// Location search functions (updated to work with top controls)
-function updateRadiusDisplay() {
-    const slider = document.getElementById('radiusSlider');
-    const display = document.getElementById('radiusDisplay');
-    if (slider && display) {
-        display.textContent = slider.value + ' km';
-        
-        // Update existing search circle if it exists
-        if (searchCircle) {
-            const center = searchCircle.getLatLng();
-            map.removeLayer(searchCircle);
-            
-            searchCircle = L.circle(center, {
-                radius: slider.value * 1000, // Convert km to meters
-                color: '#007bff',
-                fillColor: '#007bff',
-                fillOpacity: 0.1,
-                weight: 2
-            }).addTo(map);
-            // Re-run the search with the new radius
-searchAroundPoint(center.lat, center.lng);
-        }
-    }
-}
-
-function toggleLocationMode() {
-    window.locationClickMode = !window.locationClickMode;
-    const btn = document.getElementById('locationModeBtn');
-    
-    if (window.locationClickMode) {
-        btn.textContent = 'Click Active';
-        btn.classList.add('active');
-        map.getContainer().style.cursor = 'crosshair';
-        showLocationMessage('Click on the map to search for species around that location!');
-    } else {
-        btn.textContent = 'Click Mode';
-        btn.classList.remove('active');
-        map.getContainer().style.cursor = '';
-        hideLocationMessage();
-    }
-}
-
-function showLocationMessage(message) {
-    let msgDiv = document.getElementById('locationMessage');
-    if (!msgDiv) {
-        msgDiv = document.createElement('div');
-        msgDiv.id = 'locationMessage';
-        msgDiv.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 123, 255, 0.9);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 8px;
-            font-weight: bold;
-            z-index: 2000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            pointer-events: none;
-        `;
-        document.body.appendChild(msgDiv);
-    }
-    msgDiv.textContent = message;
-    msgDiv.style.display = 'block';
-}
-
-function hideLocationMessage() {
-    const msgDiv = document.getElementById('locationMessage');
-    if (msgDiv) {
-        msgDiv.style.display = 'none';
-    }
-}
-
+// Simplified location search - just moves map to location
 async function searchByLocation() {
     const input = document.getElementById('locationInput');
     const query = input.value.trim();
     
     if (!query) {
-        alert('Please enter a location to search');
+        alert('Please enter a location');
         return;
     }
     
@@ -304,7 +210,7 @@ async function searchByLocation() {
         const lng = parseFloat(coordMatch[2]);
         
         if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-            searchAroundPoint(lat, lng, query);
+            goToLocation(lat, lng, query);
             return;
         }
     }
@@ -321,7 +227,7 @@ async function searchByLocation() {
             const lng = parseFloat(data[0].lon);
             const displayName = data[0].display_name;
             
-            searchAroundPoint(lat, lng, displayName);
+            goToLocation(lat, lng, displayName);
         } else {
             showLocationResults('Location not found. Try a different search term or use coordinates (lat, lng).');
         }
@@ -331,153 +237,25 @@ async function searchByLocation() {
     }
 }
 
-function searchAroundPoint(lat, lng, locationName = null) {
-    const radiusKm = parseInt(document.getElementById('radiusSlider').value);
-    const radiusMeters = radiusKm * 1000;
+// Simple function to move map to location
+function goToLocation(lat, lng, locationName = null) {
+    // Move map to location
+    map.setView([lat, lng], 10);
     
-    // Clear previous search circle
-    if (searchCircle) {
-        map.removeLayer(searchCircle);
-    }
+    // Show simple confirmation message
+    const locationDisplay = locationName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    showLocationResults(`Moved to: ${locationDisplay}`);
     
-    // Add search circle
-    searchCircle = L.circle([lat, lng], {
-        radius: radiusMeters,
-        color: '#007bff',
-        fillColor: '#007bff',
-        fillOpacity: 0.1,
-        weight: 2
-    }).addTo(map);
-    
-    // Find observations within the radius
-    const nearbyObservations = observations.filter(obs => {
-        const distance = calculateDistance(lat, lng, obs.coordinates[0], obs.coordinates[1]);
-        return distance <= radiusKm;
-    });
-    
-    // Get unique species
-    const uniqueSpecies = [...new Set(nearbyObservations.map(obs => obs.species))];
-    const speciesCount = {};
-    
-    nearbyObservations.forEach(obs => {
-        speciesCount[obs.species] = (speciesCount[obs.species] || 0) + 1;
-    });
-    
-    // Display results - now much more subtle
-    let resultsHtml = '';
-    if (nearbyObservations.length > 0) {
-        const locationDisplay = locationName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-        resultsHtml = `Found ${nearbyObservations.length} observations of ${uniqueSpecies.length} species within ${radiusKm}km`;
-    } else {
-        const locationDisplay = locationName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-        resultsHtml = `No observations found within ${radiusKm}km`;
-    }
-    
-    showLocationResults(resultsHtml);
-    
-    // Zoom to the search area
-    map.fitBounds(searchCircle.getBounds(), { padding: [20, 20] });
-    
-    // Highlight matching observations
-    highlightLocationObservations(nearbyObservations);
-    
-    // Turn off click mode after search
-    if (window.locationClickMode) {
-        toggleLocationMode();
-    }
-}
-
-function calculateDistance(lat1, lng1, lat2, lng2) {
-    // Haversine formula to calculate distance between two points
-    const R = 6371; // Earth's radius in kilometers
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-}
-
-function highlightLocationObservations(locationObservations) {
-    // First, reset all markers to normal style
-    markerGroup.eachLayer(function(marker) {
-        if (marker._butterflyMarker) {
-            marker.setStyle({
-                fillColor: '#ff8c00',
-                fillOpacity: 0.85,
-                color: '#ffffff',
-                weight: 2
-            });
-        }
-    });
-    
-    // Then highlight the matching ones
-    if (locationObservations.length > 0) {
-        const locationCoords = new Set(
-            locationObservations.map(obs => `${obs.coordinates[0]},${obs.coordinates[1]}`)
-        );
-        
-        markerGroup.eachLayer(function(marker) {
-            if (marker._butterflyMarker) {
-                const markerCoordKey = `${marker.getLatLng().lat},${marker.getLatLng().lng}`;
-                if (locationCoords.has(markerCoordKey)) {
-                    marker.setStyle({
-                        fillColor: '#00ff00',
-                        fillOpacity: 0.9,
-                        color: '#004400',
-                        weight: 3,
-                        radius: getMarkerRadius() + 2
-                    });
-                }
-            }
-        });
-    }
+    // Clear the message after a few seconds
+    setTimeout(() => {
+        showLocationResults('');
+    }, 3000);
 }
 
 function showLocationResults(html) {
     const resultsDiv = document.getElementById('locationResults');
     if (resultsDiv) {
         resultsDiv.innerHTML = html;
-    }
-}
-
-function clearLocationSearch() {
-    // Clear search circle
-    if (searchCircle) {
-        map.removeLayer(searchCircle);
-        searchCircle = null;
-    }
-    
-    // Clear input and results
-    const input = document.getElementById('locationInput');
-    const results = document.getElementById('locationResults');
-    
-    if (input) input.value = '';
-    if (results) results.innerHTML = '';
-    
-    // Reset all markers to normal style
-    markerGroup.eachLayer(function(marker) {
-        if (marker._butterflyMarker) {
-            marker.setStyle({
-                fillColor: '#ff8c00',
-                fillOpacity: 0.85,
-                color: '#ffffff',
-                weight: 2,
-                radius: getMarkerRadius()
-            });
-        }
-    });
-    
-    // Turn off click mode
-    if (window.locationClickMode) {
-        toggleLocationMode();
-    }
-    
-    // Fit to all observations
-    if (observations.length > 0) {
-        const group = new L.featureGroup(markerGroup.getLayers());
-        map.fitBounds(group.getBounds().pad(0.1));
     }
 }
 
@@ -970,7 +748,6 @@ function getMarkerRadius() {
     if (isTouchDevice) {
         // Enhanced mobile scaling - much larger at high zoom levels
         if (zoom <= 4) return 8;        // Small at low zoom
-        else if (zoom <= 6) return 9;   
         else if (zoom <= 8) return 10;  
         else if (zoom <= 10) return 12; 
         else if (zoom <= 12) return 14; 
@@ -1181,4 +958,5 @@ function debugGitHub() {
     console.log('Load button found:', !!document.querySelector('button[onclick*="loadObservations"]'));
 }
 
-setTimeout(debugGitHub, 3000);
+setTimeout(debugGitHub, 3000); 6) return 9;   
+        else if (zoom <=
