@@ -233,6 +233,8 @@ function updateRadiusDisplay() {
                 fillOpacity: 0.1,
                 weight: 2
             }).addTo(map);
+            // Re-run the search with the new radius
+searchAroundPoint(center.lat, center.lng);
         }
     }
 }
@@ -346,8 +348,6 @@ function searchAroundPoint(lat, lng, locationName = null) {
         fillOpacity: 0.1,
         weight: 2
     }).addTo(map);
-    // Re-run the search with the new radius
-searchAroundPoint(center.lat, center.lng);
     
     // Find observations within the radius
     const nearbyObservations = observations.filter(obs => {
