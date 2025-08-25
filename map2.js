@@ -245,7 +245,7 @@ function toggleLocationMode() {
         btn.textContent = 'Click Active';
         btn.classList.add('active');
         map.getContainer().style.cursor = 'crosshair';
-        showLocationMessage('Click on the map to search for species around that location! Drag the circle to move the search area.');
+        showLocationMessage('Click on the map to search for species around that location!');
     } else {
         btn.textContent = 'Click Mode';
         btn.classList.remove('active');
@@ -338,7 +338,7 @@ function searchAroundPoint(lat, lng, locationName = null) {
         map.removeLayer(searchCircle);
     }
     
-    // Add search circle with drag functionality
+    // Add search circle
     searchCircle = L.circle([lat, lng], {
         radius: radiusMeters,
         color: '#007bff',
@@ -346,89 +346,6 @@ function searchAroundPoint(lat, lng, locationName = null) {
         fillOpacity: 0.1,
         weight: 2
     }).addTo(map);
-    
-    // Make circle draggable when in click mode
-    let isDragging = false;
-    
-    searchCircle.on('mousedown', function(e) {
-        if (window.locationClickMode) {
-            isDragging = true;
-            map.dragging.disable();
-            map.getContainer().style.cursor = 'move';
-            
-            // Prevent map click event when starting drag
-            L.DomEvent.stopPropagation(e);
-        }
-    });
-    
-    map.on('mousemove', function(e) {
-        if (isDragging && window.locationClickMode) {
-            // Update circle position
-            searchCircle.setLatLng(e.latlng);
-            
-            // Update search results in real-time (optional - you can remove this for better performance)
-            debounceSearch(e.latlng.lat, e.latlng.lng);
-        }
-    });
-    
-    map.on('mouseup', function(e) {
-        if (isDragging) {
-            isDragging = false;
-            map.dragging.enable();
-            map.getContainer().style.cursor = window.locationClickMode ? 'crosshair' : '';
-            
-            // Perform final search at new position
-            const newPos = searchCircle.getLatLng();
-            performSearch(newPos.lat, newPos.lng);
-        }
-    });
-    
-    // Touch events for mobile
-    searchCircle.on('touchstart', function(e) {
-        if (window.locationClickMode) {
-            isDragging = true;
-            map.dragging.disable();
-            L.DomEvent.stopPropagation(e);
-        }
-    });
-    
-    map.on('touchmove', function(e) {
-        if (isDragging && window.locationClickMode && e.originalEvent.touches.length === 1) {
-            const touch = e.originalEvent.touches[0];
-            const point = map.containerPointToLatLng([touch.clientX - map.getContainer().getBoundingClientRect().left, 
-                                                     touch.clientY - map.getContainer().getBoundingClientRect().top]);
-            searchCircle.setLatLng(point);
-            debounceSearch(point.lat, point.lng);
-        }
-    });
-    
-    map.on('touchend', function(e) {
-        if (isDragging) {
-            isDragging = false;
-            map.dragging.enable();
-            map.getContainer().style.cursor = window.locationClickMode ? 'crosshair' : '';
-            
-            const newPos = searchCircle.getLatLng();
-            performSearch(newPos.lat, newPos.lng);
-        }
-    });
-    
-    // Initial search
-    performSearch(lat, lng, locationName);
-}
-
-// Debounced search function to avoid too many searches while dragging
-let searchTimeout;
-function debounceSearch(lat, lng) {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        performSearch(lat, lng);
-    }, 300); // Wait 300ms after user stops dragging
-}
-
-// Separate the actual search logic
-function performSearch(lat, lng, locationName = null) {
-    const radiusKm = parseInt(document.getElementById('radiusSlider').value);
     
     // Find observations within the radius
     const nearbyObservations = observations.filter(obs => {
@@ -456,8 +373,16 @@ function performSearch(lat, lng, locationName = null) {
     
     showLocationResults(resultsHtml);
     
+    // Zoom to the search area
+    map.fitBounds(searchCircle.getBounds(), { padding: [20, 20] });
+    
     // Highlight matching observations
     highlightLocationObservations(nearbyObservations);
+    
+    // Turn off click mode after search
+    if (window.locationClickMode) {
+        toggleLocationMode();
+    }
 }
 
 function calculateDistance(lat1, lng1, lat2, lng2) {
