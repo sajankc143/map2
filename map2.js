@@ -3,6 +3,8 @@ let observations = [];
 let markers = [];
 let markerGroup;
 let isLoading = false;
+let searchCircle = null;
+let geocoder = null;
 
 const sourceUrls = [
     "https://www.butterflyexplorers.com/p/new-butterflies.html",
@@ -15,7 +17,7 @@ const sourceUrls = [
     "https://www.butterflyexplorers.com/p/butterflies-of-panama.html"
 ];
 
-// Enhanced initMap function with satellite/normal mode toggle
+// Enhanced initMap function with location search capabilities
 function initMap() {
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     
@@ -77,7 +79,7 @@ function initMap() {
         collapsed: false
     }).addTo(map);
 
-    // Create custom toggle button (alternative to layer control)
+    // Create custom toggle button
     const mapToggleControl = L.Control.extend({
         options: {
             position: 'topleft'
@@ -148,10 +150,86 @@ function initMap() {
     // Add the custom toggle control
     map.addControl(new mapToggleControl());
 
+    // Create location search control
+    const locationSearchControl = L.Control.extend({
+        options: {
+            position: 'topright'
+        },
+
+        onAdd: function(map) {
+            const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control location-search-control');
+            
+            container.style.cssText = `
+                background: rgba(255, 255, 255, 0.95);
+                padding: 10px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                backdrop-filter: blur(10px);
+                min-width: 280px;
+            `;
+            
+            container.innerHTML = `
+                <div style="margin-bottom: 8px; font-weight: bold; color: #333;">🦋 Search by Location</div>
+                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                    <input type="text" id="locationInput" placeholder="Enter city, state, or coordinates..." 
+                           style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                    <button onclick="searchByLocation()" 
+                            style="padding: 6px 10px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                        Search
+                    </button>
+                </div>
+                <div style="display: flex; gap: 5px; align-items: center; margin-bottom: 8px;">
+                    <label style="font-size: 11px; color: #666;">Radius:</label>
+                    <input type="range" id="radiusSlider" min="5" max="200" value="50" 
+                           style="flex: 1;" onchange="updateRadiusDisplay()">
+                    <span id="radiusDisplay" style="font-size: 11px; color: #666; min-width: 35px;">50 km</span>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button onclick="clearLocationSearch()" 
+                            style="flex: 1; padding: 4px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                        Clear
+                    </button>
+                    <button onclick="toggleLocationMode()" id="locationModeBtn"
+                            style="flex: 1; padding: 4px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                        Click Mode
+                    </button>
+                </div>
+                <div id="locationResults" style="margin-top: 8px; font-size: 11px; color: #666; max-height: 100px; overflow-y: auto;"></div>
+            `;
+            
+            // Prevent map interaction when interacting with the control
+            L.DomEvent.disableClickPropagation(container);
+            L.DomEvent.disableScrollPropagation(container);
+            
+            // Add enter key handler for location input
+            const locationInput = container.querySelector('#locationInput');
+            locationInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchByLocation();
+                }
+            });
+            
+            return container;
+        }
+    });
+
+    // Add the location search control
+    map.addControl(new locationSearchControl());
+
     markerGroup = L.layerGroup().addTo(map);
     
     // Add zoom event listener for responsive marker sizing
     map.on('zoomend', updateMarkerSizes);
+
+    // Initialize click mode as false
+    window.locationClickMode = false;
+
+    // Add click handler for location-based search
+    map.on('click', function(e) {
+        if (window.locationClickMode) {
+            searchAroundPoint(e.latlng.lat, e.latlng.lng);
+        }
+    });
 
     const speciesFilter = document.getElementById('speciesFilter');
     if (speciesFilter) {
@@ -159,31 +237,299 @@ function initMap() {
     }
 }
 
-// Alternative: Simple toggle function (if you prefer a basic button approach)
-function toggleMapLayer() {
-    // This is a simpler approach - you can call this from any button
-    const currentUrl = map._layers[Object.keys(map._layers)[0]]._url;
-    
-    if (currentUrl.includes('openstreetmap')) {
-        // Switch to satellite
-        map.eachLayer(layer => {
-            if (layer._url) map.removeLayer(layer);
-        });
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '© Esri, Maxar, Earthstar Geographics',
-            maxZoom: 18
-        }).addTo(map);
-    } else {
-        // Switch back to normal
-        map.eachLayer(layer => {
-            if (layer._url) map.removeLayer(layer);
-        });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 18
-        }).addTo(map);
+// New location search functions
+function updateRadiusDisplay() {
+    const slider = document.getElementById('radiusSlider');
+    const display = document.getElementById('radiusDisplay');
+    if (slider && display) {
+        display.textContent = slider.value + ' km';
+        
+        // Update existing search circle if it exists
+        if (searchCircle) {
+            const center = searchCircle.getLatLng();
+            map.removeLayer(searchCircle);
+            
+            searchCircle = L.circle(center, {
+                radius: slider.value * 1000, // Convert km to meters
+                color: '#007bff',
+                fillColor: '#007bff',
+                fillOpacity: 0.1,
+                weight: 2
+            }).addTo(map);
+        }
     }
 }
+
+function toggleLocationMode() {
+    window.locationClickMode = !window.locationClickMode;
+    const btn = document.getElementById('locationModeBtn');
+    
+    if (window.locationClickMode) {
+        btn.textContent = 'Click Active';
+        btn.style.background = '#28a745';
+        map.getContainer().style.cursor = 'crosshair';
+        showLocationMessage('Click on the map to search for species around that location!');
+    } else {
+        btn.textContent = 'Click Mode';
+        btn.style.background = '#007bff';
+        map.getContainer().style.cursor = '';
+        hideLocationMessage();
+    }
+}
+
+function showLocationMessage(message) {
+    let msgDiv = document.getElementById('locationMessage');
+    if (!msgDiv) {
+        msgDiv = document.createElement('div');
+        msgDiv.id = 'locationMessage';
+        msgDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 123, 255, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 2000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            pointer-events: none;
+        `;
+        document.body.appendChild(msgDiv);
+    }
+    msgDiv.textContent = message;
+    msgDiv.style.display = 'block';
+}
+
+function hideLocationMessage() {
+    const msgDiv = document.getElementById('locationMessage');
+    if (msgDiv) {
+        msgDiv.style.display = 'none';
+    }
+}
+
+async function searchByLocation() {
+    const input = document.getElementById('locationInput');
+    const query = input.value.trim();
+    
+    if (!query) {
+        alert('Please enter a location to search');
+        return;
+    }
+    
+    // Check if input looks like coordinates
+    const coordMatch = query.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
+    if (coordMatch) {
+        const lat = parseFloat(coordMatch[1]);
+        const lng = parseFloat(coordMatch[2]);
+        
+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            searchAroundPoint(lat, lng, query);
+            return;
+        }
+    }
+    
+    // Geocode the location using Nominatim (free OpenStreetMap geocoding)
+    try {
+        showLocationResults('Searching for location...');
+        
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+            const displayName = data[0].display_name;
+            
+            searchAroundPoint(lat, lng, displayName);
+        } else {
+            showLocationResults('Location not found. Try a different search term or use coordinates (lat, lng).');
+        }
+    } catch (error) {
+        console.error('Geocoding error:', error);
+        showLocationResults('Error searching for location. Try using coordinates (lat, lng) format.');
+    }
+}
+
+function searchAroundPoint(lat, lng, locationName = null) {
+    const radiusKm = parseInt(document.getElementById('radiusSlider').value);
+    const radiusMeters = radiusKm * 1000;
+    
+    // Clear previous search circle
+    if (searchCircle) {
+        map.removeLayer(searchCircle);
+    }
+    
+    // Add search circle
+    searchCircle = L.circle([lat, lng], {
+        radius: radiusMeters,
+        color: '#007bff',
+        fillColor: '#007bff',
+        fillOpacity: 0.1,
+        weight: 2
+    }).addTo(map);
+    
+    // Find observations within the radius
+    const nearbyObservations = observations.filter(obs => {
+        const distance = calculateDistance(lat, lng, obs.coordinates[0], obs.coordinates[1]);
+        return distance <= radiusKm;
+    });
+    
+    // Get unique species
+    const uniqueSpecies = [...new Set(nearbyObservations.map(obs => obs.species))];
+    const speciesCount = {};
+    
+    nearbyObservations.forEach(obs => {
+        speciesCount[obs.species] = (speciesCount[obs.species] || 0) + 1;
+    });
+    
+    // Display results
+    let resultsHtml = '';
+    if (nearbyObservations.length > 0) {
+        const locationDisplay = locationName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        resultsHtml = `
+            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;">
+                Found ${nearbyObservations.length} observations of ${uniqueSpecies.length} species
+            </div>
+            <div style="color: #666; font-size: 10px; margin-bottom: 5px;">
+                Within ${radiusKm}km of ${locationDisplay}
+            </div>
+            <div style="max-height: 80px; overflow-y: auto;">
+        `;
+        
+        // Sort species by count (most common first)
+        const sortedSpecies = Object.entries(speciesCount)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 10); // Show top 10
+        
+        sortedSpecies.forEach(([species, count]) => {
+            resultsHtml += `<div style="font-size: 10px; margin: 1px 0;">• ${species} (${count})</div>`;
+        });
+        
+        if (uniqueSpecies.length > 10) {
+            resultsHtml += `<div style="font-size: 9px; color: #999;">...and ${uniqueSpecies.length - 10} more species</div>`;
+        }
+        
+        resultsHtml += '</div>';
+    } else {
+        const locationDisplay = locationName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        resultsHtml = `
+            <div style="color: #dc3545;">
+                No observations found within ${radiusKm}km of ${locationDisplay}
+            </div>
+        `;
+    }
+    
+    showLocationResults(resultsHtml);
+    
+    // Zoom to the search area
+    map.fitBounds(searchCircle.getBounds(), { padding: [20, 20] });
+    
+    // Highlight matching observations
+    highlightLocationObservations(nearbyObservations);
+    
+    // Turn off click mode after search
+    if (window.locationClickMode) {
+        toggleLocationMode();
+    }
+}
+
+function calculateDistance(lat1, lng1, lat2, lng2) {
+    // Haversine formula to calculate distance between two points
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function highlightLocationObservations(locationObservations) {
+    // First, reset all markers to normal style
+    markerGroup.eachLayer(function(marker) {
+        if (marker._butterflyMarker) {
+            marker.setStyle({
+                fillColor: '#ff8c00',
+                fillOpacity: 0.85,
+                color: '#ffffff',
+                weight: 2
+            });
+        }
+    });
+    
+    // Then highlight the matching ones
+    if (locationObservations.length > 0) {
+        const locationCoords = new Set(
+            locationObservations.map(obs => `${obs.coordinates[0]},${obs.coordinates[1]}`)
+        );
+        
+        markerGroup.eachLayer(function(marker) {
+            if (marker._butterflyMarker) {
+                const markerCoordKey = `${marker.getLatLng().lat},${marker.getLatLng().lng}`;
+                if (locationCoords.has(markerCoordKey)) {
+                    marker.setStyle({
+                        fillColor: '#00ff00',
+                        fillOpacity: 0.9,
+                        color: '#004400',
+                        weight: 3,
+                        radius: getMarkerRadius() + 2
+                    });
+                }
+            }
+        });
+    }
+}
+
+function showLocationResults(html) {
+    const resultsDiv = document.getElementById('locationResults');
+    if (resultsDiv) {
+        resultsDiv.innerHTML = html;
+    }
+}
+
+function clearLocationSearch() {
+    // Clear search circle
+    if (searchCircle) {
+        map.removeLayer(searchCircle);
+        searchCircle = null;
+    }
+    
+    // Clear input and results
+    const input = document.getElementById('locationInput');
+    const results = document.getElementById('locationResults');
+    
+    if (input) input.value = '';
+    if (results) results.innerHTML = '';
+    
+    // Reset all markers to normal style
+    markerGroup.eachLayer(function(marker) {
+        if (marker._butterflyMarker) {
+            marker.setStyle({
+                fillColor: '#ff8c00',
+                fillOpacity: 0.85,
+                color: '#ffffff',
+                weight: 2,
+                radius: getMarkerRadius()
+            });
+        }
+    });
+    
+    // Turn off click mode
+    if (window.locationClickMode) {
+        toggleLocationMode();
+    }
+    
+    // Fit to all observations
+    if (observations.length > 0) {
+        const group = new L.featureGroup(markerGroup.getLayers());
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+}
+
+// Original functions (unchanged)
 function parseCoordinates(text) {
     if (!text) return null;
 
