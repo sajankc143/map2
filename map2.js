@@ -17,7 +17,7 @@ const sourceUrls = [
     "https://www.butterflyexplorers.com/p/butterflies-of-panama.html"
 ];
 
-// Enhanced initMap function with location search capabilities
+// Enhanced initMap function with location search capabilities moved to top
 function initMap() {
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     
@@ -150,95 +150,6 @@ function initMap() {
     // Add the custom toggle control
     map.addControl(new mapToggleControl());
 
-    // Create location search control
-    const locationSearchControl = L.Control.extend({
-        options: {
-            position: 'topright'
-        },
-
-        onAdd: function(map) {
-            const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control location-search-control');
-            
-            container.style.cssText = `
-                background: rgba(255, 255, 255, 0.95);
-                padding: 10px;
-                border-radius: 8px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                backdrop-filter: blur(10px);
-                min-width: 280px;
-            `;
-            
-            container.innerHTML = `
-                <div style="margin-bottom: 8px; font-weight: bold; color: #333; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);">🦋 Search by Location</div>
-                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
-                    <input type="text" id="locationInput" placeholder="Enter city, state, or coordinates..." 
-                           style="flex: 1; padding: 8px; border: 2px solid #007bff; border-radius: 6px; font-size: 13px; 
-                                  background: #ffffff; color: #333; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-                                  outline: none; transition: border-color 0.3s ease;" 
-                           onfocus="this.style.borderColor='#28a745'" 
-                           onblur="this.style.borderColor='#007bff'">
-                    <button onclick="searchByLocation()" 
-                            style="padding: 8px 12px; background: #28a745; color: black; border: none; border-radius: 6px; 
-                                   cursor: pointer; font-size: 13px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                                   transition: all 0.3s ease;" 
-                            onmouseover="this.style.background='#218838'; this.style.transform='translateY(-1px)'" 
-                            onmouseout="this.style.background='#28a745'; this.style.transform='translateY(0)'">
-                        Search
-                    </button>
-                </div>
-                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; padding: 6px; 
-                            background: rgba(240,248,255,0.8); border-radius: 4px; border: 1px solid #e1ecf7;">
-                    <label style="font-size: 12px; color: #495057; font-weight: 600; min-width: 45px;">Radius:</label>
-                    <input type="range" id="radiusSlider" min="5" max="200" value="50" 
-                           style="flex: 1; height: 6px; background: linear-gradient(to right, #007bff, #28a745); 
-                                  border-radius: 3px; outline: none; cursor: pointer;" 
-                           onchange="updateRadiusDisplay()">
-                    <span id="radiusDisplay" style="font-size: 12px; color: #495057; font-weight: bold; 
-                                                   min-width: 40px; text-align: center; background: #007bff; 
-                                                   color: black; padding: 2px 6px; border-radius: 12px;">50 km</span>
-                </div>
-                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
-                    <button onclick="clearLocationSearch()" 
-                            style="flex: 1; padding: 6px; background: #dc3545; color: black; border: none; border-radius: 5px; 
-                                   cursor: pointer; font-size: 12px; font-weight: bold; transition: all 0.3s ease;
-                                   box-shadow: 0 2px 4px rgba(0,0,0,0.1);" 
-                            onmouseover="this.style.background='#c82333'" 
-                            onmouseout="this.style.background='#dc3545'">
-                        Clear
-                    </button>
-                    <button onclick="toggleLocationMode()" id="locationModeBtn"
-                            style="flex: 1; padding: 6px; background: #007bff; color: black; border: none; border-radius: 5px; 
-                                   cursor: pointer; font-size: 12px; font-weight: bold; transition: all 0.3s ease;
-                                   box-shadow: 0 2px 4px rgba(0,0,0,0.1);" 
-                            onmouseover="this.style.background='#0056b3'" 
-                            onmouseout="this.style.background='#007bff'">
-                        Click Mode
-                    </button>
-                </div>
-                <div id="locationResults" style="margin-top: 8px; font-size: 12px; color: #495057; max-height: 120px; 
-                                                  overflow-y: auto; padding: 8px; background: rgba(248,249,250,0.9); 
-                                                  border-radius: 6px; border: 1px solid #e9ecef; min-height: 20px;"></div>
-            `;
-            
-            // Prevent map interaction when interacting with the control
-            L.DomEvent.disableClickPropagation(container);
-            L.DomEvent.disableScrollPropagation(container);
-            
-            // Add enter key handler for location input
-            const locationInput = container.querySelector('#locationInput');
-            locationInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    searchByLocation();
-                }
-            });
-            
-            return container;
-        }
-    });
-
-    // Add the location search control
-    map.addControl(new locationSearchControl());
-
     markerGroup = L.layerGroup().addTo(map);
     
     // Add zoom event listener for responsive marker sizing
@@ -258,17 +169,57 @@ function initMap() {
     if (speciesFilter) {
         speciesFilter.addEventListener('input', filterObservations);
     }
+
+    // Initialize the location search controls in the top controls area
+    initializeLocationSearchControls();
 }
 
-// New location search functions
+// New function to initialize location search controls at the top of the page
+function initializeLocationSearchControls() {
+    // Create location search controls and add them to the top controls area
+    const topControlsContainer = document.querySelector('.top-controls');
+    
+    if (topControlsContainer) {
+        const locationSearchHTML = `
+            <div class="location-search-container">
+                <h3>🦋 Search by Location</h3>
+                <div class="location-input-row">
+                    <input type="text" id="locationInput" placeholder="Enter city, state, or coordinates..." />
+                    <button onclick="searchByLocation()" class="search-btn">Search</button>
+                </div>
+                <div class="radius-control">
+                    <label>Radius:</label>
+                    <input type="range" id="radiusSlider" min="5" max="200" value="50" onchange="updateRadiusDisplay()" />
+                    <span id="radiusDisplay">50 km</span>
+                </div>
+                <div class="location-buttons">
+                    <button onclick="clearLocationSearch()" class="clear-btn">Clear</button>
+                    <button onclick="toggleLocationMode()" id="locationModeBtn" class="mode-btn">Click Mode</button>
+                </div>
+                <div id="locationResults" class="location-results"></div>
+            </div>
+        `;
+        
+        topControlsContainer.insertAdjacentHTML('beforeend', locationSearchHTML);
+        
+        // Add enter key handler for location input
+        const locationInput = document.getElementById('locationInput');
+        if (locationInput) {
+            locationInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchByLocation();
+                }
+            });
+        }
+    }
+}
+
+// Location search functions (updated to work with top controls)
 function updateRadiusDisplay() {
     const slider = document.getElementById('radiusSlider');
     const display = document.getElementById('radiusDisplay');
     if (slider && display) {
         display.textContent = slider.value + ' km';
-        display.style.background = slider.value < 50 ? '#007bff' : 
-                                   slider.value < 100 ? '#28a745' : 
-                                   slider.value < 150 ? '#ffc107' : '#dc3545';
         
         // Update existing search circle if it exists
         if (searchCircle) {
@@ -292,12 +243,12 @@ function toggleLocationMode() {
     
     if (window.locationClickMode) {
         btn.textContent = 'Click Active';
-        btn.style.background = '#28a745';
+        btn.classList.add('active');
         map.getContainer().style.cursor = 'crosshair';
         showLocationMessage('Click on the map to search for species around that location!');
     } else {
         btn.textContent = 'Click Mode';
-        btn.style.background = '#007bff';
+        btn.classList.remove('active');
         map.getContainer().style.cursor = '';
         hideLocationMessage();
     }
@@ -415,13 +366,13 @@ function searchAroundPoint(lat, lng, locationName = null) {
     if (nearbyObservations.length > 0) {
         const locationDisplay = locationName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
         resultsHtml = `
-            <div style="font-weight: bold; color: #28a745; margin-bottom: 5px;">
+            <div class="results-header">
                 Found ${nearbyObservations.length} observations of ${uniqueSpecies.length} species
             </div>
-            <div style="color: #666; font-size: 10px; margin-bottom: 5px;">
+            <div class="results-location">
                 Within ${radiusKm}km of ${locationDisplay}
             </div>
-            <div style="max-height: 80px; overflow-y: auto;">
+            <div class="results-species">
         `;
         
         // Sort species by count (most common first)
@@ -430,18 +381,18 @@ function searchAroundPoint(lat, lng, locationName = null) {
             .slice(0, 10); // Show top 10
         
         sortedSpecies.forEach(([species, count]) => {
-            resultsHtml += `<div style="font-size: 10px; margin: 1px 0;">• ${species} (${count})</div>`;
+            resultsHtml += `<div class="species-item">• ${species} (${count})</div>`;
         });
         
         if (uniqueSpecies.length > 10) {
-            resultsHtml += `<div style="font-size: 9px; color: #999;">...and ${uniqueSpecies.length - 10} more species</div>`;
+            resultsHtml += `<div class="more-species">...and ${uniqueSpecies.length - 10} more species</div>`;
         }
         
         resultsHtml += '</div>';
     } else {
         const locationDisplay = locationName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
         resultsHtml = `
-            <div style="color: #dc3545;">
+            <div class="no-results">
                 No observations found within ${radiusKm}km of ${locationDisplay}
             </div>
         `;
