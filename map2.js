@@ -193,37 +193,7 @@ function syncMapWithSearchResults(searchFilteredImages) {
     displayObservations();
     console.log(`Map synced with ${observations.length} observations from search results`);
 }
-function analyzeObservationDifference() {
-    if (!infiniteGalleryUpdater || !infiniteGalleryUpdater.filteredImages) {
-        console.log('Search system not ready for comparison');
-        return;
-    }
-    
-    console.log(`Map observations: ${observations.length}`);
-    console.log(`Search observations with coordinates: ${infiniteGalleryUpdater.filteredImages.filter(img => parseCoordinates(img.originalTitle || img.fullTitle)).length}`);
-    
-    // Find observations that exist in map but not in search results
-    const searchCoordStrings = new Set();
-    infiniteGalleryUpdater.filteredImages.forEach(img => {
-        const coords = parseCoordinates(img.originalTitle || img.fullTitle);
-        if (coords) {
-            searchCoordStrings.add(`${coords[0].toFixed(4)},${coords[1].toFixed(4)}-${img.species}`);
-        }
-    });
-    
-    const mapOnlyObs = observations.filter(obs => 
-        !searchCoordStrings.has(`${obs.coordinates[0].toFixed(4)},${obs.coordinates[1].toFixed(4)}-${obs.species}`)
-    );
-    
-    console.log(`Observations only in map (${mapOnlyObs.length}):`);
-    mapOnlyObs.slice(0, 10).forEach(obs => {
-        console.log(`- ${obs.species} at ${obs.location} (${obs.coordinates})`);
-    });
-    
-    if (mapOnlyObs.length > 10) {
-        console.log(`... and ${mapOnlyObs.length - 10} more`);
-    }
-}
+
 // Simplified function to initialize location search controls
 function initializeLocationSearchControls() {
     const topControlsContainer = document.querySelector('.top-controls');
