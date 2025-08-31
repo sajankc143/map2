@@ -655,16 +655,16 @@ async function loadObservations() {
             `;
         }
     }
-    // At the end of loadObservations function, add:
-// Check if search results are available and sync if needed
-if (typeof infiniteGalleryUpdater !== 'undefined' && 
-    infiniteGalleryUpdater.filteredImages && 
-    infiniteGalleryUpdater.currentSearchParams) {
-    
-    console.log('Initial sync with existing search filters');
-    syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
-}
-
+   // At the end of loadObservations function, add:
+    // Check if search results are available and sync if needed
+    if (typeof infiniteGalleryUpdater !== 'undefined' && 
+        infiniteGalleryUpdater.filteredImages && 
+        infiniteGalleryUpdater.currentSearchParams) {
+        
+        console.log('Initial sync with existing search filters');
+        syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+    }
+} // <-- This closes the loadObservations function
 
 // Mobile-friendly displayObservations function:
 function displayObservations() {
