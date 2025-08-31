@@ -165,11 +165,7 @@ function initMap() {
 }
 
 function syncMapWithSearchResults(searchFilteredImages) {
-    // Save original observations on first sync ONLY if not already saved
-    if (originalObservations.length === 0 && observations.length > 0) {
-        originalObservations = [...observations];
-        console.log(`Saved original ${originalObservations.length} observations`);
-    }
+    // Don't save originals here - they're saved after initial load
     
     // Clear existing observations
     observations = [];
@@ -642,6 +638,11 @@ async function loadObservations() {
     }
 
     displayObservations();
+    if (observations.length > 0) {
+        originalObservations = [...observations];
+        console.log(`Saved original ${originalObservations.length} observations after load`);
+    }
+    
     isLoading = false;
     
     if (totalLoaded > 0) {
