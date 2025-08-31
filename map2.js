@@ -1,6 +1,5 @@
 let map;
 let observations = [];
-let originalObservations = []; // ADD THIS LINE
 let markers = [];
 let markerGroup;
 let isLoading = false;
@@ -164,9 +163,8 @@ function initMap() {
     initializeLocationSearchControls();
 }
 
+// Add this function to your map script
 function syncMapWithSearchResults(searchFilteredImages) {
-    // Don't save originals here - they're saved after initial load
-    
     // Clear existing observations
     observations = [];
     
@@ -638,11 +636,6 @@ async function loadObservations() {
     }
 
     displayObservations();
-    if (observations.length > 0) {
-        originalObservations = [...observations];
-        console.log(`Saved original ${originalObservations.length} observations after load`);
-    }
-    
     isLoading = false;
     
     if (totalLoaded > 0) {
