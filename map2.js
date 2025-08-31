@@ -163,6 +163,37 @@ function initMap() {
     initializeLocationSearchControls();
 }
 
+// Add this function to your map script
+function syncMapWithSearchResults(searchFilteredImages) {
+    // Clear existing observations
+    observations = [];
+    
+    // Convert search results to map observation format
+    searchFilteredImages.forEach(image => {
+        // Try to extract coordinates from the image data
+        const coords = parseCoordinates(image.originalTitle || image.fullTitle);
+        
+        if (coords) {
+            observations.push({
+                species: image.species,
+                commonName: image.commonName,
+                coordinates: coords,
+                location: image.location || '',
+                date: image.date || '',
+                photographer: '', // Extract if available
+                imageUrl: image.thumbnailUrl,
+                fullImageUrl: image.fullImageUrl,
+                sourceUrl: image.sourceUrl,
+                originalTitle: image.originalTitle || image.fullTitle
+            });
+        }
+    });
+    
+    // Update the map display
+    displayObservations();
+    console.log(`Map synced with ${observations.length} observations from search results`);
+}
+
 // Simplified function to initialize location search controls
 function initializeLocationSearchControls() {
     const topControlsContainer = document.querySelector('.top-controls');
@@ -624,7 +655,16 @@ async function loadObservations() {
             `;
         }
     }
+    // At the end of loadObservations function, add:
+// Check if search results are available and sync if needed
+if (typeof infiniteGalleryUpdater !== 'undefined' && 
+    infiniteGalleryUpdater.filteredImages && 
+    infiniteGalleryUpdater.currentSearchParams) {
+    
+    console.log('Initial sync with existing search filters');
+    syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
 }
+
 
 // Mobile-friendly displayObservations function:
 function displayObservations() {
