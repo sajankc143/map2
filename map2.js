@@ -164,11 +164,11 @@ function initMap() {
     initializeLocationSearchControls();
 }
 
-// NEW:
 function syncMapWithSearchResults(searchFilteredImages) {
-    // Save original observations on first sync
+    // Save original observations on first sync ONLY if not already saved
     if (originalObservations.length === 0 && observations.length > 0) {
         originalObservations = [...observations];
+        console.log(`Saved original ${originalObservations.length} observations`);
     }
     
     // Clear existing observations
