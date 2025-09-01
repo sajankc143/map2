@@ -742,30 +742,30 @@ if (isTouchDevice) {
 
 // Add this new function to calculate marker size based on zoom level
 function getMarkerRadius() {
-    if (!map) return 6; // Default size
+    if (!map) return 8; // Increased default size from 6 to 8
     
     const zoom = map.getZoom();
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     
     if (isTouchDevice) {
         // Enhanced mobile scaling - much larger at high zoom levels
-        if (zoom <= 4) return 8;        // Small at low zoom
-        else if (zoom <= 6) return 9;   
-        else if (zoom <= 8) return 10;  
-        else if (zoom <= 10) return 12; 
-        else if (zoom <= 12) return 14; 
-        else if (zoom <= 14) return 16; // Large at high zoom
-        else if (zoom <= 16) return 18; // Very large at max zoom
-        else return 20;                 // Extra large at maximum zoom
+        if (zoom <= 4) return 10;       // Was 8, now 10
+        else if (zoom <= 6) return 11;  // Was 9, now 11
+        else if (zoom <= 8) return 12;  // Was 10, now 12
+        else if (zoom <= 10) return 14; // Was 12, now 14
+        else if (zoom <= 12) return 16; // Was 14, now 16
+        else if (zoom <= 14) return 18; // Was 16, now 18
+        else if (zoom <= 16) return 20; // Was 18, now 20
+        else return 22;                 // Was 20, now 22
     } else {
-        // Desktop - unchanged, normal sizes
-        if (zoom <= 4) return 4;        
-        else if (zoom <= 6) return 5;   
-        else if (zoom <= 8) return 6;   
-        else if (zoom <= 10) return 7;  
-        else if (zoom <= 12) return 8;  
-        else if (zoom <= 14) return 9;  
-        else return 10;                 // Normal max size for desktop
+        // Desktop - increased sizes for easier clicking
+        if (zoom <= 4) return 6;        // Was 4, now 6
+        else if (zoom <= 6) return 7;   // Was 5, now 7
+        else if (zoom <= 8) return 8;   // Was 6, now 8
+        else if (zoom <= 10) return 9;  // Was 7, now 9
+        else if (zoom <= 12) return 10; // Was 8, now 10
+        else if (zoom <= 14) return 11; // Was 9, now 11
+        else return 12;                 // Was 10, now 12
     }
 }
 
