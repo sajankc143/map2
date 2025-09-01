@@ -676,16 +676,16 @@ function displayObservations() {
     filteredObs.forEach(obs => {
         const markerRadius = getMarkerRadius();
         const marker = L.circleMarker(obs.coordinates, {
-            radius: markerRadius,
-            fillColor: '#ff8c00',     
-            color: '#ffffff',         
-            weight: isTouchDevice ? 3 : 2,  
-            opacity: 1,
-            fillOpacity: 0.85,
-            interactive: true,        
-            bubblingMouseEvents: false, 
-            pane: 'markerPane'       
-        });
+    radius: markerRadius,
+    fillColor: '#ff6b35',     // <- CHANGED: was '#ff8c00' 
+    color: '#ffffff',         
+    weight: isTouchDevice ? 3 : 2,  
+    opacity: 1,
+    fillOpacity: 0.95,        // <- CHANGED: was 0.85
+    interactive: true,        
+    bubblingMouseEvents: false, 
+    pane: 'markerPane'       
+});
 
         const popupContent = `
             <div>
@@ -709,62 +709,24 @@ function displayObservations() {
             closeOnEscapeKey: true       
         });
         
-        let isHovering = false;
-        let hoverTimeout;
-        
-        if (isTouchDevice) {
-            // Enhanced mobile click handling - multiple event types for reliability
-            marker.on('click', function(e) {
-                if (!this.isPopupOpen()) {
-                    this.openPopup();
-                }
-            });
-            
-            // Add touchstart as backup for maximum zoom reliability
-            marker.on('touchstart', function(e) {
-                const self = this;
-                setTimeout(() => {
-                    if (!self.isPopupOpen()) {
-                        self.openPopup();
-                    }
-                }, 100);
-            });
-            
-        } else {
-            // Desktop events - unchanged
-            marker.on('mouseover', function(e) {
-                if (!isHovering) {
-                    isHovering = true;
-                    this.setStyle({
-                        radius: getMarkerRadius() + 2,
-                        weight: 3,
-                        fillColor: '#ff6b35',
-                        fillOpacity: 0.95
-                    });
-                }
-            });
-            
-            marker.on('mouseout', function(e) {
-                isHovering = false;
-                clearTimeout(hoverTimeout);
-                hoverTimeout = setTimeout(() => {
-                    if (!isHovering) {
-                        this.setStyle({
-                            radius: getMarkerRadius(),
-                            weight: 2,
-                            fillColor: '#ff8c00',
-                            fillOpacity: 0.85
-                        });
-                    }
-                }, 100);
-            });
-            
-            marker.on('click', function(e) {
-                if (!this.isPopupOpen()) {
-                    this.openPopup();
-                }
-            });
-        }
+       // REMOVED ALL HOVER EFFECTS - just simple click handling now
+marker.on('click', function(e) {
+    if (!this.isPopupOpen()) {
+        this.openPopup();
+    }
+});
+
+// Add touchstart as backup for mobile reliability
+if (isTouchDevice) {
+    marker.on('touchstart', function(e) {
+        const self = this;
+        setTimeout(() => {
+            if (!self.isPopupOpen()) {
+                self.openPopup();
+            }
+        }, 100);
+    });
+}
 
         marker._butterflyMarker = true;
         marker.addTo(markerGroup);
