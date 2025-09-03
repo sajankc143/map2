@@ -4,6 +4,7 @@ let markers = [];
 let markerGroup;
 let isLoading = false;
 let geocoder = null;
+let isViewingSingleObservation = false; // Add this flag
 
 const sourceUrls = [
     "https://www.butterflyexplorers.com/p/new-butterflies.html",
@@ -19,11 +20,15 @@ const sourceUrls = [
 function showObservationOnMap(observationData) {
     if (!map || !observationData) return;
     
+    // Set flag to prevent auto-sync from overriding this view
+    isViewingSingleObservation = true;
+    
     // Parse coordinates from the observation data
     const coords = parseCoordinates(observationData.originalTitle || observationData.fullTitle);
     
     if (!coords) {
         console.log('No coordinates found for this observation');
+        isViewingSingleObservation = false; // Reset flag if no coordinates
         return;
     }
     
@@ -221,6 +226,9 @@ function initMap() {
 
 // Add this function to your map script
 function syncMapWithSearchResults(searchFilteredImages) {
+    // Reset the single observation flag when syncing with search results
+    isViewingSingleObservation = false;
+    
     // Clear existing observations
     observations = [];
     
@@ -714,13 +722,13 @@ async function loadObservations() {
    // At the end of loadObservations function, add:
     // Check if search results are available and sync if needed
     if (typeof infiniteGalleryUpdater !== 'undefined' && 
-    infiniteGalleryUpdater.filteredImages && 
-    infiniteGalleryUpdater.currentSearchParams &&
-    !window.location.search.includes('obs=')) {  // NEW: Don't override single observation view
-    
-    console.log('Initial sync with existing search filters');
-    syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
-}
+        infiniteGalleryUpdater.filteredImages && 
+        infiniteGalleryUpdater.currentSearchParams &&
+        !isViewingSingleObservation) {  // Use the flag instead of URL check
+        
+        console.log('Initial sync with existing search filters');
+        syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+    }
 } // <-- This closes the loadObservations function
 
 // Mobile-friendly displayObservations function:
