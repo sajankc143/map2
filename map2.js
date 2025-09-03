@@ -733,6 +733,12 @@ async function loadObservations() {
 
 // Mobile-friendly displayObservations function:
 function displayObservations() {
+    // Don't display all observations if we're viewing a single one
+    if (isViewingSingleObservation) {
+        console.log('Skipping displayObservations - viewing single observation');
+        return;
+    }
+    
     markerGroup.clearLayers();
 
     const filteredObs = getCurrentFilteredObservations();
@@ -741,16 +747,16 @@ function displayObservations() {
     filteredObs.forEach(obs => {
         const markerRadius = getMarkerRadius();
         const marker = L.circleMarker(obs.coordinates, {
-    radius: markerRadius,
-    fillColor: '#ff6b35',     // <- CHANGED: was '#ff8c00' 
-    color: '#ffffff',         
-    weight: isTouchDevice ? 3 : 2,  
-    opacity: 1,
-    fillOpacity: 0.95,        // <- CHANGED: was 0.85
-    interactive: true,        
-    bubblingMouseEvents: false, 
-    pane: 'markerPane'       
-});
+            radius: markerRadius,
+            fillColor: '#ff6b35',     
+            color: '#ffffff',         
+            weight: isTouchDevice ? 3 : 2,  
+            opacity: 1,
+            fillOpacity: 0.95,        
+            interactive: true,        
+            bubblingMouseEvents: false, 
+            pane: 'markerPane'       
+        });
 
         const popupContent = `
             <div>
@@ -774,24 +780,22 @@ function displayObservations() {
             closeOnEscapeKey: true       
         });
         
-       // REMOVED ALL HOVER EFFECTS - just simple click handling now
-marker.on('click', function(e) {
-    if (!this.isPopupOpen()) {
-        this.openPopup();
-    }
-});
-
-// Add touchstart as backup for mobile reliability
-if (isTouchDevice) {
-    marker.on('touchstart', function(e) {
-        const self = this;
-        setTimeout(() => {
-            if (!self.isPopupOpen()) {
-                self.openPopup();
+        marker.on('click', function(e) {
+            if (!this.isPopupOpen()) {
+                this.openPopup();
             }
-        }, 100);
-    });
-}
+        });
+
+        if (isTouchDevice) {
+            marker.on('touchstart', function(e) {
+                const self = this;
+                setTimeout(() => {
+                    if (!self.isPopupOpen()) {
+                        self.openPopup();
+                    }
+                }, 100);
+            });
+        }
 
         marker._butterflyMarker = true;
         marker.addTo(markerGroup);
