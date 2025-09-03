@@ -714,12 +714,13 @@ async function loadObservations() {
    // At the end of loadObservations function, add:
     // Check if search results are available and sync if needed
     if (typeof infiniteGalleryUpdater !== 'undefined' && 
-        infiniteGalleryUpdater.filteredImages && 
-        infiniteGalleryUpdater.currentSearchParams) {
-        
-        console.log('Initial sync with existing search filters');
-        syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
-    }
+    infiniteGalleryUpdater.filteredImages && 
+    infiniteGalleryUpdater.currentSearchParams &&
+    !window.location.search.includes('obs=')) {  // NEW: Don't override single observation view
+    
+    console.log('Initial sync with existing search filters');
+    syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+}
 } // <-- This closes the loadObservations function
 
 // Mobile-friendly displayObservations function:
