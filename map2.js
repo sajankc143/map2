@@ -223,39 +223,68 @@ function initMap() {
     // Initialize the simplified location search controls
     initializeLocationSearchControls();
 }
-
-// Add this function to your map script
-function syncMapWithSearchResults(searchFilteredImages) {
-    // Reset the single observation flag when syncing with search results
+// Add this function to your map script - it resets the map to show all observations
+function resetMapToAllObservations() {
+    if (!map) return;
+    
+    console.log('Resetting map to show all observations');
+    
+    // Clear the single observation flag
     isViewingSingleObservation = false;
     
-    // Clear existing observations
-    observations = [];
-    
-    // Convert search results to map observation format
-    searchFilteredImages.forEach(image => {
-        // Try to extract coordinates from the image data
-        const coords = parseCoordinates(image.originalTitle || image.fullTitle);
+    // If we have filtered images from the gallery, use those
+    if (typeof infiniteGalleryUpdater !== 'undefined' && 
+        infiniteGalleryUpdater.filteredImages && 
+        infiniteGalleryUpdater.filteredImages.length > 0) {
         
-        if (coords) {
-            observations.push({
-                species: image.species,
-                commonName: image.commonName,
-                coordinates: coords,
-                location: image.location || '',
-                date: image.date || '',
-                photographer: '', // Extract if available
-                imageUrl: image.thumbnailUrl,
-                fullImageUrl: image.fullImageUrl,
-                sourceUrl: image.sourceUrl,
-                originalTitle: image.originalTitle || image.fullTitle
-            });
-        }
-    });
-    
-    // Update the map display
-    displayObservations();
-    console.log(`Map synced with ${observations.length} observations from search results`);
+        console.log(`Restoring map view with ${infiniteGalleryUpdater.filteredImages.length} filtered observations`);
+        syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+    } 
+    // Otherwise fall back to all loaded observations
+    else if (observations && observations.length > 0) {
+        console.log(`Restoring map view with ${observations.length} total observations`);
+        displayObservations();
+    }
+    // If no observations available, just clear the map
+    else {
+        console.log('No observations to display, clearing map');
+        clearMap();
+    }
+}
+// Update your existing syncMapWithSearchResults function to handle the reset properly
+function syncMapWithSearchResults(searchFilteredImages) {
+    // Only reset the flag if we're not explicitly viewing a single observation
+    if (!isViewingSingleObservation) {
+        // Clear existing observations
+        observations = [];
+        
+        // Convert search results to map observation format
+        searchFilteredImages.forEach(image => {
+            // Try to extract coordinates from the image data
+            const coords = parseCoordinates(image.originalTitle || image.fullTitle);
+            
+            if (coords) {
+                observations.push({
+                    species: image.species,
+                    commonName: image.commonName,
+                    coordinates: coords,
+                    location: image.location || '',
+                    date: image.date || '',
+                    photographer: '', // Extract if available
+                    imageUrl: image.thumbnailUrl,
+                    fullImageUrl: image.fullImageUrl,
+                    sourceUrl: image.sourceUrl,
+                    originalTitle: image.originalTitle || image.fullTitle
+                });
+            }
+        });
+        
+        // Update the map display
+        displayObservations();
+        console.log(`Map synced with ${observations.length} observations from search results`);
+    } else {
+        console.log('Skipping map sync - currently viewing single observation');
+    }
 }
 
 // Simplified function to initialize location search controls
