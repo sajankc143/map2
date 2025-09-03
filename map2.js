@@ -15,7 +15,63 @@ const sourceUrls = [
     "https://www.butterflyexplorers.com/p/butterflies-of-new-mexico.html",
     "https://www.butterflyexplorers.com/p/butterflies-of-panama.html"
 ];
-
+// NEW: Function to show a specific observation on the map
+function showObservationOnMap(observationData) {
+    if (!map || !observationData) return;
+    
+    // Parse coordinates from the observation data
+    const coords = parseCoordinates(observationData.originalTitle || observationData.fullTitle);
+    
+    if (!coords) {
+        console.log('No coordinates found for this observation');
+        return;
+    }
+    
+    // Clear existing markers
+    clearMap();
+    
+    // Create marker for this specific observation
+    const markerRadius = getMarkerRadius();
+    const marker = L.circleMarker(coords, {
+        radius: markerRadius + 2, // Slightly larger for single observation
+        fillColor: '#ff0000', // Red color to highlight single observation
+        color: '#ffffff',
+        weight: 3,
+        opacity: 1,
+        fillOpacity: 0.9,
+        interactive: true
+    });
+    
+    // Create popup content
+    const popupContent = `
+        <div>
+            <div class="popup-species">${observationData.species}</div>
+            <div class="popup-common">${observationData.commonName}</div>
+            ${observationData.thumbnailUrl ? `<img src="${observationData.thumbnailUrl}" class="popup-image" alt="${observationData.species}" onerror="this.style.display='none'">` : ''}
+            <div class="popup-location">📍 ${observationData.location || 'Location not specified'}</div>
+            ${observationData.date ? `<div class="popup-date">📅 ${new Date(observationData.date).toLocaleDateString()}</div>` : ''}
+        </div>
+    `;
+    
+    marker.bindPopup(popupContent, {
+        maxWidth: 300,
+        closeButton: true,
+        autoPan: true,
+        keepInView: true,
+        className: 'custom-popup'
+    });
+    
+    // Add marker to map
+    marker.addTo(markerGroup);
+    
+    // Center map on this observation
+    map.setView(coords, 12);
+    
+    // Auto-open the popup
+    marker.openPopup();
+    
+    console.log(`Map centered on observation: ${observationData.species} at`, coords);
+}
 // Enhanced initMap function with simplified location search
 function initMap() {
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
