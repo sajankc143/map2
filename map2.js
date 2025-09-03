@@ -4,7 +4,13 @@ let markers = [];
 let markerGroup;
 let isLoading = false;
 let geocoder = null;
-let isViewingSingleObservation = false; // Add this flag
+
+// FIXED: Better state management instead of simple boolean
+const mapState = {
+    viewMode: 'all', // 'all', 'filtered', 'single-observation'
+    currentObservation: null,
+    lastUpdate: null
+};
 
 const sourceUrls = [
     "https://www.butterflyexplorers.com/p/new-butterflies.html",
@@ -16,30 +22,34 @@ const sourceUrls = [
     "https://www.butterflyexplorers.com/p/butterflies-of-new-mexico.html",
     "https://www.butterflyexplorers.com/p/butterflies-of-panama.html"
 ];
-// NEW: Function to show a specific observation on the map
+
+// FIXED: Robust function to show a specific observation on the map
 function showObservationOnMap(observationData) {
-    if (!map || !observationData) return;
+    if (!map || !observationData) {
+        console.warn('Map or observation data not available');
+        return false;
+    }
     
-    // Set flag to prevent auto-sync from overriding this view
-    isViewingSingleObservation = true;
-    
-    // Parse coordinates from the observation data
     const coords = parseCoordinates(observationData.originalTitle || observationData.fullTitle);
     
     if (!coords) {
         console.log('No coordinates found for this observation');
-        isViewingSingleObservation = false; // Reset flag if no coordinates
-        return;
+        return false;
     }
     
-    // Clear existing markers
+    // Update map state
+    mapState.viewMode = 'single-observation';
+    mapState.currentObservation = observationData;
+    mapState.lastUpdate = Date.now();
+    
+    console.log('Map state set to single observation:', observationData.species);
+    
     clearMap();
     
-    // Create marker for this specific observation
     const markerRadius = getMarkerRadius();
     const marker = L.circleMarker(coords, {
-        radius: markerRadius + 2, // Slightly larger for single observation
-        fillColor: '#ff0000', // Red color to highlight single observation
+        radius: markerRadius + 2,
+        fillColor: '#ff0000',
         color: '#ffffff',
         weight: 3,
         opacity: 1,
@@ -47,7 +57,6 @@ function showObservationOnMap(observationData) {
         interactive: true
     });
     
-    // Create popup content
     const popupContent = `
         <div>
             <div class="popup-species">${observationData.species}</div>
@@ -66,17 +75,23 @@ function showObservationOnMap(observationData) {
         className: 'custom-popup'
     });
     
-    // Add marker to map
     marker.addTo(markerGroup);
-    
-    // Center map on this observation
     map.setView(coords, 12);
-    
-    // Auto-open the popup
     marker.openPopup();
     
     console.log(`Map centered on observation: ${observationData.species} at`, coords);
+    return true;
 }
+
+// FIXED: Function to explicitly reset map to show all observations
+function resetMapToAllObservations() {
+    mapState.viewMode = 'all';
+    mapState.currentObservation = null;
+    mapState.lastUpdate = Date.now();
+    console.log('Map state reset to show all observations');
+    displayObservations();
+}
+
 // Enhanced initMap function with simplified location search
 function initMap() {
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -95,7 +110,6 @@ function initMap() {
         zoomDelta: isTouchDevice ? 0.5 : 1
     }).setView([39.8283, -98.5795], 4);
 
-    // Define different tile layers
     const baseLayers = {
         "Normal": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
@@ -130,16 +144,13 @@ function initMap() {
         })
     };
 
-    // Add default layer (Normal)
     baseLayers["Normal"].addTo(map);
 
-    // Add layer control
     const layerControl = L.control.layers(baseLayers, null, {
         position: 'topright',
         collapsed: false
     }).addTo(map);
 
-    // Create custom toggle button
     const mapToggleControl = L.Control.extend({
         options: {
             position: 'topleft'
@@ -170,17 +181,14 @@ function initMap() {
             let currentLayer = 'Normal';
             
             container.onclick = function() {
-                // Cycle through map types
                 const layerKeys = Object.keys(baseLayers);
                 const currentIndex = layerKeys.indexOf(currentLayer);
                 const nextIndex = (currentIndex + 1) % layerKeys.length;
                 const nextLayer = layerKeys[nextIndex];
                 
-                // Remove current layer and add new one
                 map.removeLayer(baseLayers[currentLayer]);
                 map.addLayer(baseLayers[nextLayer]);
                 
-                // Update button
                 currentLayer = nextLayer;
                 const icons = {
                     'Normal': '🗺️',
@@ -190,7 +198,6 @@ function initMap() {
                 };
                 container.innerHTML = `${icons[nextLayer]} ${nextLayer}`;
                 
-                // Update button style based on layer
                 if (nextLayer === 'Dark') {
                     container.style.background = 'rgba(50, 50, 50, 0.9)';
                     container.style.color = '#fff';
@@ -200,19 +207,13 @@ function initMap() {
                 }
             };
             
-            // Prevent map interaction when clicking the control
             L.DomEvent.disableClickPropagation(container);
-            
             return container;
         }
     });
 
-    // Add the custom toggle control
     map.addControl(new mapToggleControl());
-
     markerGroup = L.layerGroup().addTo(map);
-    
-    // Add zoom event listener for responsive marker sizing
     map.on('zoomend', updateMarkerSizes);
 
     const speciesFilter = document.getElementById('speciesFilter');
@@ -220,21 +221,21 @@ function initMap() {
         speciesFilter.addEventListener('input', filterObservations);
     }
 
-    // Initialize the simplified location search controls
     initializeLocationSearchControls();
 }
 
-// Add this function to your map script
+// FIXED: Updated function to sync with gallery search results
 function syncMapWithSearchResults(searchFilteredImages) {
-    // Reset the single observation flag when syncing with search results
-    isViewingSingleObservation = false;
+    console.log('Syncing map with search results...');
     
-    // Clear existing observations
+    // Reset map state to show filtered results
+    mapState.viewMode = 'filtered';
+    mapState.currentObservation = null;
+    mapState.lastUpdate = Date.now();
+    
     observations = [];
     
-    // Convert search results to map observation format
     searchFilteredImages.forEach(image => {
-        // Try to extract coordinates from the image data
         const coords = parseCoordinates(image.originalTitle || image.fullTitle);
         
         if (coords) {
@@ -244,7 +245,7 @@ function syncMapWithSearchResults(searchFilteredImages) {
                 coordinates: coords,
                 location: image.location || '',
                 date: image.date || '',
-                photographer: '', // Extract if available
+                photographer: '',
                 imageUrl: image.thumbnailUrl,
                 fullImageUrl: image.fullImageUrl,
                 sourceUrl: image.sourceUrl,
@@ -253,12 +254,10 @@ function syncMapWithSearchResults(searchFilteredImages) {
         }
     });
     
-    // Update the map display
     displayObservations();
     console.log(`Map synced with ${observations.length} observations from search results`);
 }
 
-// Simplified function to initialize location search controls
 function initializeLocationSearchControls() {
     const topControlsContainer = document.querySelector('.top-controls');
     
@@ -276,7 +275,6 @@ function initializeLocationSearchControls() {
         
         topControlsContainer.insertAdjacentHTML('beforeend', locationSearchHTML);
         
-        // Add enter key handler for location input
         const locationInput = document.getElementById('locationInput');
         if (locationInput) {
             locationInput.addEventListener('keypress', function(e) {
@@ -288,7 +286,6 @@ function initializeLocationSearchControls() {
     }
 }
 
-// Simplified location search - just moves map to location
 async function searchByLocation() {
     const input = document.getElementById('locationInput');
     const query = input.value.trim();
@@ -298,7 +295,6 @@ async function searchByLocation() {
         return;
     }
     
-    // Check if input looks like coordinates
     const coordMatch = query.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
     if (coordMatch) {
         const lat = parseFloat(coordMatch[1]);
@@ -310,7 +306,6 @@ async function searchByLocation() {
         }
     }
     
-    // Geocode the location using Nominatim (free OpenStreetMap geocoding)
     try {
         showLocationResults('Searching for location...');
         
@@ -332,16 +327,12 @@ async function searchByLocation() {
     }
 }
 
-// Simple function to move map to location
 function goToLocation(lat, lng, locationName = null) {
-    // Move map to location
     map.setView([lat, lng], 10);
     
-    // Show simple confirmation message
     const locationDisplay = locationName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
     showLocationResults(`Moved to: ${locationDisplay}`);
     
-    // Clear the message after a few seconds
     setTimeout(() => {
         showLocationResults('');
     }, 3000);
@@ -354,7 +345,6 @@ function showLocationResults(html) {
     }
 }
 
-// Original functions (unchanged)
 function parseCoordinates(text) {
     if (!text) return null;
 
@@ -699,6 +689,11 @@ async function loadObservations() {
         }, 15000);
     }
 
+    // Reset map state after loading new data
+    mapState.viewMode = 'all';
+    mapState.currentObservation = null;
+    mapState.lastUpdate = Date.now();
+    
     displayObservations();
     isLoading = false;
     
@@ -719,25 +714,28 @@ async function loadObservations() {
             `;
         }
     }
-   // At the end of loadObservations function, add:
+    
     // Check if search results are available and sync if needed
     if (typeof infiniteGalleryUpdater !== 'undefined' && 
         infiniteGalleryUpdater.filteredImages && 
         infiniteGalleryUpdater.currentSearchParams &&
-        !isViewingSingleObservation) {  // Use the flag instead of URL check
+        mapState.viewMode === 'all') {
         
         console.log('Initial sync with existing search filters');
         syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
     }
-} // <-- This closes the loadObservations function
+}
 
-// Mobile-friendly displayObservations function:
+// FIXED: Mobile-friendly displayObservations function with proper state checking
 function displayObservations() {
-    // Don't display all observations if we're viewing a single one
-    if (isViewingSingleObservation) {
+    // Only skip display if we're specifically viewing a single observation
+    if (mapState.viewMode === 'single-observation') {
         console.log('Skipping displayObservations - viewing single observation');
+        console.log('Current observation:', mapState.currentObservation?.species);
         return;
     }
+    
+    console.log(`Displaying observations in ${mapState.viewMode} mode`);
     
     markerGroup.clearLayers();
 
@@ -809,36 +807,32 @@ function displayObservations() {
     updateStats();
 }
 
-// Add this new function to calculate marker size based on zoom level
 function getMarkerRadius() {
-    if (!map) return 8; // Increased default size from 6 to 8
+    if (!map) return 8;
     
     const zoom = map.getZoom();
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     
     if (isTouchDevice) {
-        // Enhanced mobile scaling - much larger at high zoom levels
-        if (zoom <= 4) return 10;       // Was 8, now 10
-        else if (zoom <= 6) return 11;  // Was 9, now 11
-        else if (zoom <= 8) return 12;  // Was 10, now 12
-        else if (zoom <= 10) return 14; // Was 12, now 14
-        else if (zoom <= 12) return 16; // Was 14, now 16
-        else if (zoom <= 14) return 18; // Was 16, now 18
-        else if (zoom <= 16) return 20; // Was 18, now 20
-        else return 22;                 // Was 20, now 22
+        if (zoom <= 4) return 10;
+        else if (zoom <= 6) return 11;
+        else if (zoom <= 8) return 12;
+        else if (zoom <= 10) return 14;
+        else if (zoom <= 12) return 16;
+        else if (zoom <= 14) return 18;
+        else if (zoom <= 16) return 20;
+        else return 22;
     } else {
-        // Desktop - increased sizes for easier clicking
-        if (zoom <= 4) return 6;        // Was 4, now 6
-        else if (zoom <= 6) return 7;   // Was 5, now 7
-        else if (zoom <= 8) return 8;   // Was 6, now 8
-        else if (zoom <= 10) return 9;  // Was 7, now 9
-        else if (zoom <= 12) return 10; // Was 8, now 10
-        else if (zoom <= 14) return 11; // Was 9, now 11
-        else return 12;                 // Was 10, now 12
+        if (zoom <= 4) return 6;
+        else if (zoom <= 6) return 7;
+        else if (zoom <= 8) return 8;
+        else if (zoom <= 10) return 9;
+        else if (zoom <= 12) return 10;
+        else if (zoom <= 14) return 11;
+        else return 12;
     }
 }
 
-// Add this function to update marker sizes when zoom changes (smooth)
 function updateMarkerSizes() {
     const newRadius = getMarkerRadius();
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -847,7 +841,7 @@ function updateMarkerSizes() {
         if (marker._butterflyMarker && marker.setRadius) {
             marker.setStyle({
                 radius: newRadius,
-                weight: isTouchDevice ? 3 : 2  // Adjust border thickness too
+                weight: isTouchDevice ? 3 : 2
             });
         }
     });
@@ -1028,6 +1022,7 @@ function debugGitHub() {
     console.log('Map initialized:', typeof map !== 'undefined');
     console.log('Observations:', observations.length);
     console.log('Load button found:', !!document.querySelector('button[onclick*="loadObservations"]'));
+    console.log('Current map state:', mapState);
 }
 
 setTimeout(debugGitHub, 3000);
