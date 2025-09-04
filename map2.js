@@ -232,14 +232,21 @@ function resetMapToAllObservations() {
     // FIXED: Clear the single observation flag
     isViewingSingleObservation = false;
     
-    // If we have filtered images from the gallery, use those
-    if (typeof infiniteGalleryUpdater !== 'undefined' && 
-        infiniteGalleryUpdater.filteredImages && 
-        infiniteGalleryUpdater.filteredImages.length > 0) {
-        
-        console.log(`Restoring map view with ${infiniteGalleryUpdater.filteredImages.length} filtered observations`);
-        syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
-    } 
+    // Check if we're viewing a single observation (from URL parameter)
+const urlParams = new URLSearchParams(window.location.search);
+const obsId = urlParams.get('obs');
+
+if (obsId) {
+    console.log('URL contains observation ID, skipping auto-sync to preserve single observation view');
+    // Don't sync with search results when viewing a specific observation
+} else if (typeof infiniteGalleryUpdater !== 'undefined' && 
+           infiniteGalleryUpdater.filteredImages && 
+           infiniteGalleryUpdater.currentSearchParams &&
+           !isViewingSingleObservation) {
+    
+    console.log('Initial sync with existing search filters');
+    syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+}
     // Otherwise fall back to all loaded observations
     else if (observations && observations.length > 0) {
         console.log(`Restoring map view with ${observations.length} total observations`);
