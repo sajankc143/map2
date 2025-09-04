@@ -16,14 +16,13 @@ const sourceUrls = [
     "https://www.butterflyexplorers.com/p/butterflies-of-new-mexico.html",
     "https://www.butterflyexplorers.com/p/butterflies-of-panama.html"
 ];
-// NEW: Function to show a specific observation on the map
 function showObservationOnMap(observationData) {
     if (!map || !observationData) return;
     
     // Set flag to prevent auto-sync from overriding this view
     isViewingSingleObservation = true;
     
-    console.log('Showing single observation on map, clearing all other markers');
+    console.log('Showing single observation on map');
     
     // Parse coordinates from the observation data
     const coords = parseCoordinates(observationData.originalTitle || observationData.fullTitle);
@@ -34,17 +33,14 @@ function showObservationOnMap(observationData) {
         return;
     }
     
-    // CRITICAL: Clear the observations array so displayObservations() won't show them
-    observations = [];
-    
-    // Clear existing markers
+    // Clear existing markers but DON'T clear observations array
     clearMap();
     
     // Create marker for this specific observation
     const markerRadius = getMarkerRadius();
     const marker = L.circleMarker(coords, {
-        radius: markerRadius + 2, // Slightly larger for single observation
-        fillColor: '#ff0000', // Red color to highlight single observation
+        radius: markerRadius + 2,
+        fillColor: '#ff0000',
         color: '#ffffff',
         weight: 3,
         opacity: 1,
@@ -234,24 +230,17 @@ function resetMapToAllObservations() {
     
     console.log('Resetting map to show all observations');
     
-    // FIXED: Clear the single observation flag
+    // IMPORTANT: Clear the single observation flag
     isViewingSingleObservation = false;
     
-    // Check if we're viewing a single observation (from URL parameter)
-const urlParams = new URLSearchParams(window.location.search);
-const obsId = urlParams.get('obs');
-
-if (obsId) {
-    console.log('URL contains observation ID, skipping auto-sync to preserve single observation view');
-    // Don't sync with search results when viewing a specific observation
-} else if (typeof infiniteGalleryUpdater !== 'undefined' && 
-           infiniteGalleryUpdater.filteredImages && 
-           infiniteGalleryUpdater.currentSearchParams &&
-           !isViewingSingleObservation) {
-    
-    console.log('Initial sync with existing search filters');
-    syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
-}
+    // If we have filtered images from the gallery, use those
+    if (typeof infiniteGalleryUpdater !== 'undefined' && 
+        infiniteGalleryUpdater.filteredImages && 
+        infiniteGalleryUpdater.filteredImages.length > 0) {
+        
+        console.log(`Restoring map view with ${infiniteGalleryUpdater.filteredImages.length} filtered observations`);
+        syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+    } 
     // Otherwise fall back to all loaded observations
     else if (observations && observations.length > 0) {
         console.log(`Restoring map view with ${observations.length} total observations`);
