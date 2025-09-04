@@ -49,15 +49,14 @@ function showObservationOnMap(observationData) {
     
     // Create popup content
     const popupContent = `
-    <div style="text-align: center;">
-        <div style="color: #77e4ff; font-style: italic; margin-bottom: 2px;">${obs.species}</div>
-        <div style="color: #77e4ff; font-weight: bold; margin-bottom: 8px;">${obs.commonName}</div>
-        ${obs.imageUrl ? `<img src="${obs.imageUrl}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" alt="${obs.species}" onerror="this.style.display='none'">` : ''}
-        <div style="font-size: 12px; color: #666;">📍 ${obs.location}</div>
-        ${obs.date ? `<div style="font-size: 12px; color: #666;">📅 ${obs.date}</div>` : ''}
-        ${obs.photographer ? `<div style="font-size: 12px; color: #666;">📷 ${obs.photographer}</div>` : ''}
-    </div>
-`;
+        <div>
+            <div class="popup-species">${observationData.species}</div>
+            <div class="popup-common">${observationData.commonName}</div>
+            ${observationData.thumbnailUrl ? `<img src="${observationData.thumbnailUrl}" class="popup-image" alt="${observationData.species}" onerror="this.style.display='none'">` : ''}
+            <div class="popup-location">📍 ${observationData.location || 'Location not specified'}</div>
+            ${observationData.date ? `<div class="popup-date">📅 ${new Date(observationData.date).toLocaleDateString()}</div>` : ''}
+        </div>
+    `;
     
     marker.bindPopup(popupContent, {
         maxWidth: 300,
