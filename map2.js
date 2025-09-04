@@ -749,30 +749,22 @@ async function loadObservations() {
         }
     }
 
-    // NEW: Check if we should show a single observation from URL
+    // SIMPLE FIX: Check URL before auto-syncing
     const urlParams = new URLSearchParams(window.location.search);
     const obsId = urlParams.get('obs');
     
-    if (obsId) {
-        console.log(`URL contains observation ID ${obsId}, preparing for single observation view`);
-        // Set flag early to prevent normal sync from interfering
-        isViewingSingleObservation = true;
-        
-        // Clear the map to prepare for single observation
-        clearMap();
-        
-        console.log('Map cleared, waiting for gallery to call showObservationOnMap()');
-        return; // Skip the normal sync logic below
-    }
-
-    // EXISTING: Check if search results are available and sync if needed
-    if (typeof infiniteGalleryUpdater !== 'undefined' && 
-        infiniteGalleryUpdater.filteredImages && 
-        infiniteGalleryUpdater.currentSearchParams &&
-        !isViewingSingleObservation) {
-        
-        console.log('Initial sync with existing search filters');
-        syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+    if (!obsId) {
+        // Only do normal sync if there's no observation ID in URL
+        if (typeof infiniteGalleryUpdater !== 'undefined' && 
+            infiniteGalleryUpdater.filteredImages && 
+            infiniteGalleryUpdater.currentSearchParams &&
+            !isViewingSingleObservation) {
+            
+            console.log('Initial sync with existing search filters');
+            syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+        }
+    } else {
+        console.log(`URL contains observation ID ${obsId}, skipping initial sync - waiting for gallery to show single observation`);
     }
 }
 
