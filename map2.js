@@ -47,23 +47,15 @@ function showObservationOnMap(observationData) {
         interactive: true
     });
     
+    // Create popup content
     const popupContent = `
-    <div style="text-align: center; font-family: Arial, sans-serif;">
-        ${obs.imageUrl ? `
-            <img src="${obs.imageUrl}" class="popup-image" alt="${obs.species}" 
-                 style="width: 150px; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd; margin-bottom: 10px; display: block;" 
-                 onerror="this.style.display='none'">
-        ` : ''}
-        
-        <div style="padding: 5px;">
-            <p style="font-size: 14px; margin: 0; line-height: 1.4;">
-                <i style="color: #77e4ff; font-size: 15px;">${obs.species}</i><br>
-                <strong style="color: #77e4ff; font-size: 14px;">${obs.commonName}</strong>
-                ${obs.location ? `<small style="color: #888; display: block; margin-top: 4px;">📍 ${obs.location}</small>` : ''}
-                ${obs.date ? `<small style="color: #999; display: block; margin-top: 2px;">📅 ${obs.date}</small>` : ''}
-                ${obs.photographer ? `<small style="color: #999; display: block; margin-top: 2px;">📷 ${obs.photographer}</small>` : ''}
-            </p>
-        </div>
+    <div style="text-align: center;">
+        <div style="color: #77e4ff; font-style: italic; margin-bottom: 2px;">${obs.species}</div>
+        <div style="color: #77e4ff; font-weight: bold; margin-bottom: 8px;">${obs.commonName}</div>
+        ${obs.imageUrl ? `<img src="${obs.imageUrl}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" alt="${obs.species}" onerror="this.style.display='none'">` : ''}
+        <div style="font-size: 12px; color: #666;">📍 ${obs.location}</div>
+        ${obs.date ? `<div style="font-size: 12px; color: #666;">📅 ${obs.date}</div>` : ''}
+        ${obs.photographer ? `<div style="font-size: 12px; color: #666;">📷 ${obs.photographer}</div>` : ''}
     </div>
 `;
     
