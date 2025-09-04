@@ -23,14 +23,19 @@ function showObservationOnMap(observationData) {
     // Set flag to prevent auto-sync from overriding this view
     isViewingSingleObservation = true;
     
+    console.log('Showing single observation on map, clearing all other markers');
+    
     // Parse coordinates from the observation data
     const coords = parseCoordinates(observationData.originalTitle || observationData.fullTitle);
     
     if (!coords) {
         console.log('No coordinates found for this observation');
-        isViewingSingleObservation = false; // Reset flag if no coordinates
+        isViewingSingleObservation = false;
         return;
     }
+    
+    // CRITICAL: Clear the observations array so displayObservations() won't show them
+    observations = [];
     
     // Clear existing markers
     clearMap();
