@@ -223,14 +223,17 @@ function initMap() {
     // Initialize the simplified location search controls
     initializeLocationSearchControls();
 }
-// Add this function to your map script - it resets the map to show all observations
+/ UPDATED: Better resetMapToAllObservations function
 function resetMapToAllObservations() {
     if (!map) return;
     
     console.log('Resetting map to show all observations');
     
-    // Clear the single observation flag
+    // IMPORTANT: Clear the single observation flag FIRST
     isViewingSingleObservation = false;
+    
+    // Clear the map completely first
+    clearMap();
     
     // If we have filtered images from the gallery, use those
     if (typeof infiniteGalleryUpdater !== 'undefined' && 
@@ -238,53 +241,54 @@ function resetMapToAllObservations() {
         infiniteGalleryUpdater.filteredImages.length > 0) {
         
         console.log(`Restoring map view with ${infiniteGalleryUpdater.filteredImages.length} filtered observations`);
+        
+        // Force sync with the current filtered results
         syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
     } 
-    // Otherwise fall back to all loaded observations
+    // Otherwise fall back to all loaded observations  
     else if (observations && observations.length > 0) {
         console.log(`Restoring map view with ${observations.length} total observations`);
+        // Force display all observations
         displayObservations();
     }
-    // If no observations available, just clear the map
     else {
-        console.log('No observations to display, clearing map');
-        clearMap();
+        console.log('No observations available - will display when loaded');
     }
 }
-// Update your existing syncMapWithSearchResults function to handle the reset properly
+/ UPDATED: Also update your syncMapWithSearchResults to be more reliable
 function syncMapWithSearchResults(searchFilteredImages) {
-    // Only reset the flag if we're not explicitly viewing a single observation
-    if (!isViewingSingleObservation) {
-        // Clear existing observations
-        observations = [];
+    console.log(`Syncing map with ${searchFilteredImages.length} search results`);
+    
+    // Always clear the single observation flag when syncing with search results
+    isViewingSingleObservation = false;
+    
+    // Clear existing observations
+    observations = [];
+    
+    // Convert search results to map observation format
+    searchFilteredImages.forEach(image => {
+        // Try to extract coordinates from the image data
+        const coords = parseCoordinates(image.originalTitle || image.fullTitle);
         
-        // Convert search results to map observation format
-        searchFilteredImages.forEach(image => {
-            // Try to extract coordinates from the image data
-            const coords = parseCoordinates(image.originalTitle || image.fullTitle);
-            
-            if (coords) {
-                observations.push({
-                    species: image.species,
-                    commonName: image.commonName,
-                    coordinates: coords,
-                    location: image.location || '',
-                    date: image.date || '',
-                    photographer: '', // Extract if available
-                    imageUrl: image.thumbnailUrl,
-                    fullImageUrl: image.fullImageUrl,
-                    sourceUrl: image.sourceUrl,
-                    originalTitle: image.originalTitle || image.fullTitle
-                });
-            }
-        });
-        
-        // Update the map display
-        displayObservations();
-        console.log(`Map synced with ${observations.length} observations from search results`);
-    } else {
-        console.log('Skipping map sync - currently viewing single observation');
-    }
+        if (coords) {
+            observations.push({
+                species: image.species,
+                commonName: image.commonName,
+                coordinates: coords,
+                location: image.location || '',
+                date: image.date || '',
+                photographer: '', // Extract if available
+                imageUrl: image.thumbnailUrl,
+                fullImageUrl: image.fullImageUrl,
+                sourceUrl: image.sourceUrl,
+                originalTitle: image.originalTitle || image.fullTitle
+            });
+        }
+    });
+    
+    // Force update the map display
+    displayObservations();
+    console.log(`Map synced with ${observations.length} observations from search results`);
 }
 
 // Simplified function to initialize location search controls
@@ -760,13 +764,16 @@ async function loadObservations() {
     }
 } // <-- This closes the loadObservations function
 
-// Mobile-friendly displayObservations function:
 function displayObservations() {
+    console.log(`displayObservations called - isViewingSingleObservation: ${isViewingSingleObservation}`);
+    
     // Don't display all observations if we're viewing a single one
     if (isViewingSingleObservation) {
         console.log('Skipping displayObservations - viewing single observation');
         return;
     }
+    
+    console.log(`Displaying ${observations.length} observations on map`);
     
     markerGroup.clearLayers();
 
@@ -836,6 +843,8 @@ function displayObservations() {
     }
 
     updateStats();
+    
+    console.log(`Successfully displayed ${filteredObs.length} observations`);
 }
 
 // Add this new function to calculate marker size based on zoom level
