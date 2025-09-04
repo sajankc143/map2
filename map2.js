@@ -770,6 +770,15 @@ async function loadObservations() {
 
 // Mobile-friendly displayObservations function:
 function displayObservations() {
+    // Check if URL has observation ID - if so, don't show all observations
+    const urlParams = new URLSearchParams(window.location.search);
+    const obsId = urlParams.get('obs');
+    
+    if (obsId) {
+        console.log('URL contains observation ID, skipping displayObservations');
+        return;
+    }
+    
     // Don't display all observations if we're viewing a single one
     if (isViewingSingleObservation) {
         console.log('Skipping displayObservations - viewing single observation');
