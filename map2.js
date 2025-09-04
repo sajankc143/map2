@@ -748,17 +748,33 @@ async function loadObservations() {
             `;
         }
     }
-   // At the end of loadObservations function, add:
-    // Check if search results are available and sync if needed
+
+    // NEW: Check if we should show a single observation from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const obsId = urlParams.get('obs');
+    
+    if (obsId) {
+        console.log(`URL contains observation ID ${obsId}, preparing for single observation view`);
+        // Set flag early to prevent normal sync from interfering
+        isViewingSingleObservation = true;
+        
+        // Clear the map to prepare for single observation
+        clearMap();
+        
+        console.log('Map cleared, waiting for gallery to call showObservationOnMap()');
+        return; // Skip the normal sync logic below
+    }
+
+    // EXISTING: Check if search results are available and sync if needed
     if (typeof infiniteGalleryUpdater !== 'undefined' && 
         infiniteGalleryUpdater.filteredImages && 
         infiniteGalleryUpdater.currentSearchParams &&
-        !isViewingSingleObservation) {  // Use the flag instead of URL check
+        !isViewingSingleObservation) {
         
         console.log('Initial sync with existing search filters');
         syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
     }
-} // <-- This closes the loadObservations function
+}
 
 // Mobile-friendly displayObservations function:
 function displayObservations() {
