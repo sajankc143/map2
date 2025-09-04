@@ -5,8 +5,6 @@ let markerGroup;
 let isLoading = false;
 let geocoder = null;
 let isViewingSingleObservation = false; // Add this flag
-// show a shared observation if ?obs=... is present
-let initialObsParam = (new URLSearchParams(window.location.search)).get('obs');
 
 const sourceUrls = [
     "https://www.butterflyexplorers.com/p/new-butterflies.html",
@@ -60,21 +58,12 @@ function showObservationOnMap(observationData) {
         </div>
     `;
     
-       marker.bindPopup(popupContent, {
+    marker.bindPopup(popupContent, {
         maxWidth: 300,
         closeButton: true,
         autoPan: true,
         keepInView: true,
         className: 'custom-popup'
-    });
-
-    // When user closes the popup, exit single-observation mode and restore map markers
-    marker.on('popupclose', function() {
-        isViewingSingleObservation = false;
-        // Small timeout to allow popup state to fully change before re-rendering
-        setTimeout(() => {
-            displayObservations();
-        }, 50);
     });
     
     // Add marker to map
@@ -764,67 +753,7 @@ async function loadObservations() {
         infiniteGalleryUpdater.filteredImages && 
         infiniteGalleryUpdater.currentSearchParams &&
         !isViewingSingleObservation) {  // Use the flag instead of URL check
-            // If the page was opened with ?obs=... try to find and show that observation now
-    if (initialObsParam) {
-        console.log('Looking for shared observation id:', initialObsParam);
-        // Look first in the normalized observations
-        let found = observations.find(o =>
-            (o.originalTitle && o.originalTitle.includes(initialObsParam)) ||
-            (o.fullImageUrl && o.fullImageUrl.includes(initialObsParam)) ||
-            (o.imageUrl && o.imageUrl.includes(initialObsParam))
-        );
-
-        // Fallback: try gallery images if available
-        if (!found && typeof infiniteGalleryUpdater !== 'undefined' && infiniteGalleryUpdater.filteredImages) {
-            const imgMatch = infiniteGalleryUpdater.filteredImages.find(img =>
-                (img.originalTitle && img.originalTitle.includes(initialObsParam)) ||
-                (img.fullImageUrl && img.fullImageUrl.includes(initialObsParam)) ||
-                (img.thumbnailUrl && img.thumbnailUrl.includes(initialObsParam))
-            );
-            if (imgMatch) {
-                found = {
-                    species: imgMatch.species || 'Unknown',
-                    commonName: imgMatch.commonName || '',
-                    originalTitle: imgMatch.originalTitle || imgMatch.fullTitle || '',
-                    thumbnailUrl: imgMatch.thumbnailUrl || imgMatch.imageUrl || '',
-                    fullImageUrl: imgMatch.fullImageUrl || imgMatch.fullImageUrl || '',
-                    location: imgMatch.location || '',
-                    date: imgMatch.date || '',
-                    coordinates: imgMatch.coordinates || null
-                };
-            }
-        }
-
-        if (found) {
-            // Build object showObservationOnMap expects
-            const obsForMap = {
-                species: found.species || 'Unknown',
-                commonName: found.commonName || '',
-                originalTitle: found.originalTitle || found.fullTitle || '',
-                thumbnailUrl: found.thumbnailUrl || found.imageUrl || '',
-                fullImageUrl: found.fullImageUrl || '',
-                location: found.location || '',
-                date: found.date || '',
-                coordinates: found.coordinates || null
-            };
-
-            // If no coordinates included, try parsing them from the title
-            if (!obsForMap.coordinates && obsForMap.originalTitle) {
-                const coords = parseCoordinates(obsForMap.originalTitle);
-                if (coords) obsForMap.coordinates = coords;
-            }
-
-            if (obsForMap.coordinates) {
-                console.log('Showing shared observation on map:', initialObsParam, obsForMap);
-                showObservationOnMap(obsForMap);
-                initialObsParam = null; // avoid re-triggering
-            } else {
-                console.log('Found shared obs but no coordinates to show on map:', initialObsParam);
-            }
-        } else {
-            console.log('Shared observation not found after loading:', initialObsParam);
-        }
-    }
+        
         console.log('Initial sync with existing search filters');
         syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
     }
