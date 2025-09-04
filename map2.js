@@ -47,16 +47,28 @@ function showObservationOnMap(observationData) {
         interactive: true
     });
     
-    // Create popup content
     const popupContent = `
-        <div>
-            <div class="popup-species">${observationData.species}</div>
-            <div class="popup-common">${observationData.commonName}</div>
-            ${observationData.thumbnailUrl ? `<img src="${observationData.thumbnailUrl}" class="popup-image" alt="${observationData.species}" onerror="this.style.display='none'">` : ''}
-            <div class="popup-location">📍 ${observationData.location || 'Location not specified'}</div>
-            ${observationData.date ? `<div class="popup-date">📅 ${new Date(observationData.date).toLocaleDateString()}</div>` : ''}
+    <div style="text-align: center; font-family: Arial, sans-serif; min-width: 180px;">
+        ${obs.imageUrl ? `
+            <div style="margin-bottom: 8px;">
+                <img src="${obs.imageUrl}" class="popup-image" alt="${obs.species}" 
+                     style="width: 140px; height: 140px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;" 
+                     onerror="this.style.display='none'">
+            </div>
+        ` : ''}
+        
+        <div style="padding: 0 5px;">
+            <div style="font-size: 14px; margin-bottom: 8px;">
+                <div style="color: #77e4ff; font-style: italic; margin-bottom: 2px;">${obs.species}</div>
+                <div style="color: #77e4ff; font-weight: bold;">${obs.commonName}</div>
+            </div>
+            
+            ${obs.location ? `<div style="color: #666; font-size: 12px; margin-bottom: 3px;">📍 ${obs.location}</div>` : ''}
+            ${obs.date ? `<div style="color: #666; font-size: 12px; margin-bottom: 3px;">📅 ${obs.date}</div>` : ''}
+            ${obs.photographer ? `<div style="color: #666; font-size: 12px;">📷 ${obs.photographer}</div>` : ''}
         </div>
-    `;
+    </div>
+`;
     
     marker.bindPopup(popupContent, {
         maxWidth: 300,
