@@ -8,13 +8,7 @@ let isViewingSingleObservation = false; // Add this flag
 
 const sourceUrls = [
     "https://www.butterflyexplorers.com/p/new-butterflies.html",
-    "https://www.butterflyexplorers.com/p/dual-checklist.html",
-    "https://www.butterflyexplorers.com/p/butterflies-of-arizona.html",
-    "https://www.butterflyexplorers.com/p/butterflies-of-florida.html",
-    "https://www.butterflyexplorers.com/p/butterflies-of-texas.html",
-    "https://www.butterflyexplorers.com/p/butterflies-of-puerto-rico.html",
-    "https://www.butterflyexplorers.com/p/butterflies-of-new-mexico.html",
-    "https://www.butterflyexplorers.com/p/butterflies-of-panama.html"
+    
 ];
 function showObservationOnMap(observationData) {
     if (!map || !observationData) return;
