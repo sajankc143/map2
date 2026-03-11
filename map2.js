@@ -218,44 +218,6 @@ function initMap() {
     // Initialize the simplified location search controls
     initializeLocationSearchControls();
 }
-function filterMapByLetter(letter) {
-    isViewingSingleObservation = false;
-    markerGroup.clearLayers();
-    
-    const filtered = letter 
-        ? observations.filter(obs => obs.species.charAt(0).toUpperCase() === letter.toUpperCase())
-        : observations;
-    
-    filtered.forEach(obs => {
-        const marker = L.circleMarker(obs.coordinates, {
-            radius: getMarkerRadius(),
-            fillColor: '#ff6b35',
-            color: '#ffffff',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.95,
-            interactive: true
-        });
-        marker.bindPopup(`
-            <div>
-                <div class="popup-species">${obs.species}</div>
-                <div class="popup-common">${obs.commonName}</div>
-                ${obs.imageUrl ? `<img src="${obs.imageUrl}" class="popup-image" alt="${obs.species}" onerror="this.style.display='none'">` : ''}
-                <div class="popup-location">📍 ${obs.location}</div>
-                ${obs.date ? `<div class="popup-date">📅 ${obs.date}</div>` : ''}
-            </div>
-        `, { maxWidth: 300, className: 'custom-popup' });
-        marker._butterflyMarker = true;
-        marker.addTo(markerGroup);
-    });
-    
-    if (filtered.length > 0) {
-        const group = new L.featureGroup(markerGroup.getLayers());
-        map.fitBounds(group.getBounds().pad(0.1));
-    }
-    
-    updateStats();
-}
 // UPDATE this function in your map script
 function resetMapToAllObservations() {
     if (!map) return;
@@ -285,15 +247,20 @@ function resetMapToAllObservations() {
     }
 }
 
+// UPDATE this function in your map script
 function syncMapWithSearchResults(searchFilteredImages) {
     isViewingSingleObservation = false;
     
-    const letter = (typeof infiniteGalleryUpdater !== 'undefined' && infiniteGalleryUpdater._alphaFilter) 
-        ? infiniteGalleryUpdater._alphaFilter 
-        : null;
+    // Get the species names from the gallery filtered images
+    const speciesNames = new Set(searchFilteredImages.map(img => img.species));
     
-    filterMapByLetter(letter);
+    // Filter the map's own observations by those species names
+    observations = originalObservations.filter(obs => speciesNames.has(obs.species));
+    
+    displayObservations();
+    console.log(`Map synced: ${observations.length} observations for ${speciesNames.size} species`);
 }
+
 // Simplified function to initialize location search controls
 function initializeLocationSearchControls() {
     const topControlsContainer = document.querySelector('.top-controls');
