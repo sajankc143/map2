@@ -249,16 +249,36 @@ function resetMapToAllObservations() {
 
 // UPDATE this function in your map script
 function syncMapWithSearchResults(searchFilteredImages) {
+    // FIXED: Always clear the flag when syncing with search results
     isViewingSingleObservation = false;
     
-    // Get the species names from the gallery filtered images
-    const speciesNames = new Set(searchFilteredImages.map(img => img.species));
+    // Clear existing observations
+    observations = [];
     
-    // Filter the map's own observations by those species names
-    observations = originalObservations.filter(obs => speciesNames.has(obs.species));
+    // Convert search results to map observation format
+    searchFilteredImages.forEach(image => {
+        // Try to extract coordinates from the image data
+        const coords = parseCoordinates(image.originalTitle || image.fullTitle);
+        
+        if (coords) {
+            observations.push({
+                species: image.species,
+                commonName: image.commonName,
+                coordinates: coords,
+                location: image.location || '',
+                date: image.date || '',
+                photographer: '', // Extract if available
+                imageUrl: image.thumbnailUrl,
+                fullImageUrl: image.fullImageUrl,
+                sourceUrl: image.sourceUrl,
+                originalTitle: image.originalTitle || image.fullTitle
+            });
+        }
+    });
     
+    // Update the map display
     displayObservations();
-    console.log(`Map synced: ${observations.length} observations for ${speciesNames.size} species`);
+    console.log(`Map synced with ${observations.length} observations from search results`);
 }
 
 // Simplified function to initialize location search controls
