@@ -210,14 +210,25 @@ function applyBoundsFilterToGallery() {
         return false;
     });
 
-    infiniteGalleryUpdater.filteredImages = filtered;
-    infiniteGalleryUpdater.currentPage = 1;
-    infiniteGalleryUpdater.updateResultsOnly();
-    syncMapWithSearchResults(filtered);
-
     console.log(`Bounds filter: ${filtered.length} observations in selected area`);
-}
 
+    // Switch to all-observations view so the gallery renders correctly
+    infiniteGalleryUpdater.currentView = 'all';
+    infiniteGalleryUpdater.currentSpecies = null;
+    infiniteGalleryUpdater.currentPage = 1;
+
+    // Set both filteredImages AND a dummy searchParams so the gallery
+    // knows a filter is active and doesn't reset on re-render
+    infiniteGalleryUpdater.filteredImages = filtered;
+    infiniteGalleryUpdater.currentSearchParams = { mapBoundsActive: true };
+
+    // Scroll gallery into view
+    const container = document.querySelector('#infinite-gallery-container');
+    if (container) container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    infiniteGalleryUpdater.updateInfiniteGalleryContainer();
+    syncMapWithSearchResults(filtered);
+}
 // Point-in-polygon using ray casting
 function pointInPolygon(latlng, polygonLatLngs) {
     const x = latlng.lng, y = latlng.lat;
@@ -239,22 +250,23 @@ function clearBoundsFilter() {
 
     if (!window.infiniteGalleryUpdater) return;
 
-    // Reset to ALL observations regardless of previous filters
-    infiniteGalleryUpdater.filteredImages = [...infiniteGalleryUpdater.allImages];
+    infiniteGalleryUpdater.currentView = 'all';
+    infiniteGalleryUpdater.currentSpecies = null;
     infiniteGalleryUpdater.currentSearchParams = null;
+    infiniteGalleryUpdater.filteredImages = [...infiniteGalleryUpdater.allImages];
     infiniteGalleryUpdater.currentPage = 1;
 
     // Reset search form fields
-    const fields = ['family-search', 'species-search', 'location-search', 'date-filter-type'];
-    fields.forEach(id => {
+    ['family-search', 'species-search', 'location-search'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.value = el.tagName === 'SELECT' ? (id === 'family-search' ? 'all' : 'all') : '';
+        if (el) el.value = el.tagName === 'SELECT' ? 'all' : '';
     });
+    const dateType = document.getElementById('date-filter-type');
+    if (dateType) dateType.value = 'all';
 
-    infiniteGalleryUpdater.updateResultsOnly();
+    infiniteGalleryUpdater.updateInfiniteGalleryContainer();
     syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
 }
-
 function clearSelectionShapes() {
     if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
     if (selectionPolygon)   { map.removeLayer(selectionPolygon);   selectionPolygon = null; }
