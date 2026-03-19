@@ -14,14 +14,7 @@ const sourceUrls = [
     
 ];
 function initBoundsSelectionTool() {
-    document.head.insertAdjacentHTML('beforeend', `
-        <style>
-            #bounds-rect-btn { background: rgba(0,0,0,0.85) !important; }
-            #bounds-rect-btn.active { background: rgba(231,76,60,1) !important; }
-            #bounds-clear-btn { background: rgba(231,76,60,1) !important; }
-        </style>
-    `);
-    document.getElementById('bounds-rect-btn').classList.add('active');
+    const rectBtn = document.getElementById('bounds-rect-btn');
     const clearBtn = document.getElementById('bounds-clear-btn');
     if (rectBtn) rectBtn.addEventListener('click', () => {
         if (activeSelectionMode === 'rectangle') {
@@ -89,7 +82,7 @@ function exitSelectionMode() {
     map.dragging.enable();
     map.getContainer().style.cursor = '';
     const btn = document.getElementById('bounds-rect-btn');
-    if (btn) btn.classList.remove('active');
+    if (btn) btn.style.background = 'rgba(255,255,255,0.15)';
 }
 
 function clearBoundsFilter() {
@@ -292,25 +285,24 @@ function initMap() {
 
     // Add the custom toggle control
     map.addControl(new mapToggleControl());
-    const boundsSelectControl = L.Control.extend({
+const boundsSelectControl = L.Control.extend({
     options: { position: 'topleft' },
     onAdd: function() {
         const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
         container.style.cssText = 'display:flex;flex-direction:column;gap:4px;background:none;border:none;box-shadow:none;';
-        const btnStyle = `border:1px solid rgba(255,255,255,0.5);border-radius:10px;color:white;
-    padding:8px 12px;cursor:pointer;font-size:13px;font-weight:600;
-    white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.5);`;
+        const btnStyle = `border:1px solid rgba(255,255,255,0.3);border-radius:10px;color:white;
+            padding:8px 12px;cursor:pointer;font-size:13px;font-weight:600;
+            backdrop-filter:blur(10px);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);`;
         container.innerHTML = `
-    <button id="bounds-rect-btn" style="background:rgba(0,0,0,0.85) !important;${btnStyle}">⬚ Select Area</button>
-    <button id="bounds-clear-btn" style="display:none;background:rgba(231,76,60,1) !important;${btnStyle}">✕ Clear Filter</button>
-`;
+            <button id="bounds-rect-btn" style="background:rgba(255,255,255,0.15);${btnStyle}">⬚ Select Area</button>
+            <button id="bounds-clear-btn" style="display:none;background:rgba(231,76,60,0.8);${btnStyle}">✕ Clear Filter</button>
+        `;
         L.DomEvent.disableClickPropagation(container);
         return container;
     }
 });
 map.addControl(new boundsSelectControl());
 setTimeout(initBoundsSelectionTool, 100);
-
     markerGroup = L.layerGroup().addTo(map);
     
     // Add zoom event listener for responsive marker sizing
