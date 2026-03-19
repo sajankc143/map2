@@ -206,9 +206,41 @@ function initMap() {
     map.addControl(new mapToggleControl());
 
     markerGroup = L.layerGroup().addTo(map);
-    
-    // Add zoom event listener for responsive marker sizing
-    map.on('zoomend', updateMarkerSizes);
+
+// Add zoom event listener for responsive marker sizing
+map.on('zoomend', updateMarkerSizes);
+
+// Bounding box selection
+const drawnItems = new L.FeatureGroup();
+map.addLayer(drawnItems);
+
+const drawControl = new L.Control.Draw({
+    position: 'topleft',
+    draw: {
+        rectangle: true,
+        polygon: false,
+        circle: false,
+        marker: false,
+        polyline: false,
+        circlemarker: false
+    },
+    edit: {
+        featureGroup: drawnItems,
+        remove: true
+    }
+});
+map.addControl(drawControl);
+
+map.on(L.Draw.Event.CREATED, function(e) {
+    drawnItems.clearLayers();
+    drawnItems.addLayer(e.layer);
+    const bounds = e.layer.getBounds();
+    filterGalleryByBounds(bounds);
+});
+
+map.on(L.Draw.Event.DELETED, function() {
+    clearBoundsFilter();
+});
 
     const speciesFilter = document.getElementById('speciesFilter');
     if (speciesFilter) {
@@ -279,6 +311,31 @@ function syncMapWithSearchResults(searchFilteredImages) {
     // Update the map display
     displayObservations();
     console.log(`Map synced with ${observations.length} observations from search results`);
+}
+function filterGalleryByBounds(bounds) {
+    if (!window.infiniteGalleryUpdater) return;
+
+    const filtered = infiniteGalleryUpdater.allImages.filter(img => {
+        const coords = parseCoordinates(img.originalTitle || img.fullTitle);
+        if (!coords) return false;
+        return bounds.contains(coords);
+    });
+
+    infiniteGalleryUpdater.filteredImages = filtered;
+    infiniteGalleryUpdater.currentPage = 1;
+    infiniteGalleryUpdater.updateResultsOnly();
+
+    console.log(`Bounds filter: ${filtered.length} observations in selected area`);
+}
+
+function clearBoundsFilter() {
+    if (!window.infiniteGalleryUpdater) return;
+
+    infiniteGalleryUpdater.filteredImages = [...infiniteGalleryUpdater.allImages];
+    infiniteGalleryUpdater.currentPage = 1;
+    infiniteGalleryUpdater.updateResultsOnly();
+
+    console.log('Bounds filter cleared');
 }
 
 // Simplified function to initialize location search controls
