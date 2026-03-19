@@ -8,11 +8,55 @@ let isViewingSingleObservation = false; // Add this flag
 let selectionRectangle = null;
 let mapBoundsFilter = null;
 let activeSelectionMode = null;
+let resizeHandles = [];
 
 const sourceUrls = [
     "https://www.butterflyexplorers.com/p/new-butterflies.html",
     
 ];
+function addResizeHandles(rect) {
+    resizeHandles.forEach(h => map.removeLayer(h));
+    resizeHandles = [];
+    
+    const bounds = rect.getBounds();
+    const corners = [
+        bounds.getNorthWest(), bounds.getNorthEast(),
+        bounds.getSouthEast(), bounds.getSouthWest()
+    ];
+
+    corners.forEach((corner, i) => {
+        const handle = L.circleMarker(corner, {
+            radius: 8, color: '#fff',
+            fillColor: '#3498db', fillOpacity: 1, weight: 2
+        }).addTo(map);
+
+        handle.on('mousedown', function(e) {
+            L.DomEvent.stop(e);
+            map.dragging.disable();
+            const oppositeCorner = corners[(i + 2) % 4];
+
+            function onMove(e) {
+                const newBounds = L.latLngBounds(e.latlng, oppositeCorner);
+                rect.setBounds(newBounds);
+                const nb = rect.getBounds();
+                const newCorners = [nb.getNorthWest(), nb.getNorthEast(), nb.getSouthEast(), nb.getSouthWest()];
+                resizeHandles.forEach((h, idx) => h.setLatLng(newCorners[idx]));
+            }
+
+            function onUp() {
+                map.off('mousemove', onMove);
+                map.off('mouseup', onUp);
+                map.dragging.enable();
+                filterGalleryByBounds(rect.getBounds());
+            }
+
+            map.on('mousemove', onMove);
+            map.on('mouseup', onUp);
+        });
+
+        resizeHandles.push(handle);
+    });
+}
 function initBoundsSelectionTool() {
     const rectBtn = document.getElementById('bounds-rect-btn');
     const clearBtn = document.getElementById('bounds-clear-btn');
@@ -61,8 +105,8 @@ function enterRectangleMode() {
         exitSelectionMode();
         document.getElementById('bounds-clear-btn').style.display = 'inline-block';
 
-        // Call function defined in the HTML page
         filterGalleryByBounds(bounds);
+        addResizeHandles(selectionRectangle);
     }
 
     map._rectHandlers = { onMouseDown, onMouseMove, onMouseUp };
@@ -88,8 +132,10 @@ function exitSelectionMode() {
 function clearBoundsFilter() {
     mapBoundsFilter = null;
     if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
+    resizeHandles.forEach(h => map.removeLayer(h));
+    resizeHandles = [];
     document.getElementById('bounds-clear-btn').style.display = 'none';
-    filterGalleryByBounds(null); // null = reset
+    filterGalleryByBounds(null);
 }
 function showObservationOnMap(observationData) {
     if (!map || !observationData) return;
