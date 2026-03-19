@@ -82,48 +82,84 @@ function enterRectangleMode() {
 
     let startLatLng = null;
 
-    function onMouseDown(e) {
-        startLatLng = e.latlng;
+    function getLatLngFromEvent(e) {
+        if (e.latlng) return e.latlng;
+        if (e.touches && e.touches[0]) {
+            const touch = e.touches[0];
+            return map.containerPointToLatLng(
+                L.point(touch.clientX - map.getContainer().getBoundingClientRect().left,
+                        touch.clientY - map.getContainer().getBoundingClientRect().top)
+            );
+        }
+        return null;
+    }
+
+    function onStart(e) {
+        const latlng = getLatLngFromEvent(e);
+        if (!latlng) return;
+        startLatLng = latlng;
         if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
     }
 
-    function onMouseMove(e) {
+    function onMove(e) {
         if (!startLatLng) return;
+        const latlng = getLatLngFromEvent(e);
+        if (!latlng) return;
         if (selectionRectangle) map.removeLayer(selectionRectangle);
-        selectionRectangle = L.rectangle([startLatLng, e.latlng], {
+        selectionRectangle = L.rectangle([startLatLng, latlng], {
             color: '#3498db', weight: 2,
             fillColor: '#3498db', fillOpacity: 0.15, dashArray: '6, 4'
         }).addTo(map);
     }
 
-    function onMouseUp(e) {
+    function onEnd(e) {
         if (!startLatLng) return;
-        const tooSmall = Math.abs(startLatLng.lat - e.latlng.lat) < 0.001 &&
-                         Math.abs(startLatLng.lng - e.latlng.lng) < 0.001;
+        const latlng = getLatLngFromEvent(e) || 
+            (e.changedTouches && e.changedTouches[0] ? 
+                map.containerPointToLatLng(L.point(
+                    e.changedTouches[0].clientX - map.getContainer().getBoundingClientRect().left,
+                    e.changedTouches[0].clientY - map.getContainer().getBoundingClientRect().top
+                )) : null);
+        if (!latlng) return;
+
+        const tooSmall = Math.abs(startLatLng.lat - latlng.lat) < 0.001 &&
+                         Math.abs(startLatLng.lng - latlng.lng) < 0.001;
         if (tooSmall) { startLatLng = null; return; }
 
-        const bounds = L.latLngBounds(startLatLng, e.latlng);
+        const bounds = L.latLngBounds(startLatLng, latlng);
         startLatLng = null;
         mapBoundsFilter = bounds;
 
         exitSelectionMode();
         document.getElementById('bounds-clear-btn').style.display = 'inline-block';
-
         filterGalleryByBounds(bounds);
         addResizeHandles(selectionRectangle);
     }
 
-    map._rectHandlers = { onMouseDown, onMouseMove, onMouseUp };
-    map.on('mousedown', onMouseDown);
-    map.on('mousemove', onMouseMove);
-    map.on('mouseup', onMouseUp);
-}
+    // Mouse events
+    map.on('mousedown', onStart);
+    map.on('mousemove', onMove);
+    map.on('mouseup', onEnd);
 
+    // Touch events - attach to map container directly
+    const container = map.getContainer();
+    container.addEventListener('touchstart', onStart, { passive: false });
+    container.addEventListener('touchmove', onMove, { passive: false });
+    container.addEventListener('touchend', onEnd, { passive: false });
+
+    map._rectHandlers = { onStart, onMove, onEnd };
+}
 function exitSelectionMode() {
     if (map._rectHandlers) {
-        map.off('mousedown', map._rectHandlers.onMouseDown);
-        map.off('mousemove', map._rectHandlers.onMouseMove);
-        map.off('mouseup', map._rectHandlers.onMouseUp);
+        map.off('mousedown', map._rectHandlers.onStart);
+        map.off('mousemove', map._rectHandlers.onMove);
+        map.off('mouseup', map._rectHandlers.onEnd);
+        
+        const container = map.getContainer();
+        container.removeEventListener('touchstart', map._rectHandlers.onStart);
+        container.removeEventListener('touchmove', map._rectHandlers.onMove);
+        container.removeEventListener('touchend', map._rectHandlers.onEnd);
+        
         map._rectHandlers = null;
     }
     activeSelectionMode = null;
