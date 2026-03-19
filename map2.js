@@ -294,8 +294,8 @@ function initMap() {
             padding:8px 12px;cursor:pointer;font-size:13px;font-weight:600;
             backdrop-filter:blur(10px);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);`;
         container.innerHTML = `
-            <button id="bounds-rect-btn" style="background:rgba(255,255,255,0.15);${btnStyle}">⬚ Select Area</button>
-            <button id="bounds-clear-btn" style="display:none;background:rgba(231,76,60,0.8);${btnStyle}">✕ Clear Filter</button>
+            <button id="bounds-rect-btn" style="background:rgba(0,0,0,0.6);${btnStyle}">⬚ Select Area</button>
+            <button id="bounds-clear-btn" style="display:none;background:rgba(231,76,60,1);${btnStyle}">✕ Clear Filter</button>
         `;
         L.DomEvent.disableClickPropagation(container);
         return container;
