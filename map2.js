@@ -176,9 +176,12 @@ function enterRectangleMode() {
     map.on('mouseup', onMouseUp);
 
     const container = map.getContainer();
-    container.addEventListener('touchstart', onTouchStart, { passive: false });
-    container.addEventListener('touchmove', onTouchMove, { passive: false });
-    container.addEventListener('touchend', onTouchEnd, { passive: false });
+container._onTouchStart = onTouchStart;
+container._onTouchMove = onTouchMove;
+container._onTouchEnd = onTouchEnd;
+container.addEventListener('touchstart', onTouchStart, { passive: false });
+container.addEventListener('touchmove', onTouchMove, { passive: false });
+container.addEventListener('touchend', onTouchEnd, { passive: false });
 
     map._rectHandlers = { onMouseDown, onMouseMove, onMouseUp, onTouchStart, onTouchMove, onTouchEnd };
 }
@@ -187,10 +190,10 @@ function exitSelectionMode() {
         map.off('mousedown', map._rectHandlers.onMouseDown);
         map.off('mousemove', map._rectHandlers.onMouseMove);
         map.off('mouseup', map._rectHandlers.onMouseUp);
-        const container = map.getContainer();
-        container.removeEventListener('touchstart', map._rectHandlers.onTouchStart);
-        container.removeEventListener('touchmove', map._rectHandlers.onTouchMove);
-        container.removeEventListener('touchend', map._rectHandlers.onTouchEnd);
+       const container = map.getContainer();
+container.removeEventListener('touchstart', map._rectHandlers.onTouchStart);
+container.removeEventListener('touchmove', map._rectHandlers.onTouchMove);
+container.removeEventListener('touchend', map._rectHandlers.onTouchEnd);
         map._rectHandlers = null;
     }
     activeSelectionMode = null;
