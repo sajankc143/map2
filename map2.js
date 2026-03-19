@@ -339,14 +339,33 @@ function filterGalleryByBounds(bounds) {
         return bounds.contains(latLng);
     });
 
+    console.log(`Bounds filter: ${filtered.length} observations in selected area`);
+
+    // Update gallery
     infiniteGalleryUpdater.filteredImages = filtered;
     infiniteGalleryUpdater.currentPage = 1;
     infiniteGalleryUpdater.updateResultsOnly();
 
-    // Also update map markers to only show filtered
-    syncMapWithSearchResults(filtered);
+    // Update map markers — clear first then show only filtered
+    markerGroup.clearLayers();
+    observations = [];
+    filtered.forEach(img => {
+        const coords = parseCoordinates(img.originalTitle || img.fullTitle);
+        if (!coords) return;
+        observations.push({
+            species: img.species,
+            commonName: img.commonName,
+            coordinates: coords,
+            location: img.location || '',
+            date: img.date || '',
+            imageUrl: img.thumbnailUrl,
+            fullImageUrl: img.fullImageUrl,
+            sourceUrl: img.sourceUrl,
+            originalTitle: img.originalTitle || img.fullTitle
+        });
+    });
 
-    console.log(`Bounds filter: ${filtered.length} observations in selected area`);
+    displayObservations();
 }
 
 function clearBoundsFilter() {
