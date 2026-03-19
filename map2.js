@@ -14,7 +14,14 @@ const sourceUrls = [
     
 ];
 function initBoundsSelectionTool() {
-    const rectBtn = document.getElementById('bounds-rect-btn');
+    document.head.insertAdjacentHTML('beforeend', `
+        <style>
+            #bounds-rect-btn { background: rgba(0,0,0,0.85) !important; }
+            #bounds-rect-btn.active { background: rgba(231,76,60,1) !important; }
+            #bounds-clear-btn { background: rgba(231,76,60,1) !important; }
+        </style>
+    `);
+    document.getElementById('bounds-rect-btn').classList.add('active');
     const clearBtn = document.getElementById('bounds-clear-btn');
     if (rectBtn) rectBtn.addEventListener('click', () => {
         if (activeSelectionMode === 'rectangle') {
@@ -82,7 +89,7 @@ function exitSelectionMode() {
     map.dragging.enable();
     map.getContainer().style.cursor = '';
     const btn = document.getElementById('bounds-rect-btn');
-    if (btn) btn.style.background = 'rgba(0,0,0,0.85)';
+    if (btn) btn.classList.remove('active');
 }
 
 function clearBoundsFilter() {
