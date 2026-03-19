@@ -282,6 +282,27 @@ function hideClearButton() {
 function showMapTooltip(text, autoDismissMs = null) {
     let tip = document.getElementById('map-draw-tooltip');
     if (!tip) {
+        tip = document.createElement('div');
+        tip.id = 'map-draw-tooltip';
+        tip.style.cssText = `
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.75); color: #fff; padding: 8px 16px;
+            border-radius: 12px; font-size: 13px; font-weight: 500;
+            pointer-events: none; z-index: 1000; white-space: nowrap;
+            backdrop-filter: blur(10px);
+        `;
+        document.getElementById('map').appendChild(tip);
+    }
+    tip.textContent = text;
+    tip.style.display = 'block';
+    if (autoDismissMs) setTimeout(hideMapTooltip, autoDismissMs);
+}
+
+function hideMapTooltip() {
+    const tip = document.getElementById('map-draw-tooltip');
+    if (tip) tip.style.display = 'none';
+}
+
 function showObservationOnMap(observationData) {
     if (!map || !observationData) return;
     
