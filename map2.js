@@ -82,7 +82,7 @@ function exitSelectionMode() {
     map.dragging.enable();
     map.getContainer().style.cursor = '';
     const btn = document.getElementById('bounds-rect-btn');
-    if (btn) btn.style.background = 'rgba(255,255,255,0.15)';
+    if (btn) btn.style.background = 'rgba(0,0,0,0.85)';
 }
 
 function clearBoundsFilter() {
