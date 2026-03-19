@@ -101,12 +101,6 @@ function enterRectangleMode() {
 
     let startLatLng = null;
 
-    function getLatLngFromTouch(touch) {
-        const r = map.getContainer().getBoundingClientRect();
-        return map.containerPointToLatLng(L.point(touch.clientX - r.left, touch.clientY - r.top));
-    }
-
-    // ── MOUSE (desktop) ──
     function onMouseDown(e) {
         startLatLng = e.latlng;
         if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
@@ -136,64 +130,18 @@ function enterRectangleMode() {
         if (selectionRectangle) addResizeHandles(selectionRectangle);
     }
 
-    // ── TOUCH (mobile) ──
-    function onTouchStart(e) {
-        e.preventDefault();
-        startLatLng = getLatLngFromTouch(e.touches[0]);
-        if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
-        resizeHandles.forEach(h => map.removeLayer(h));
-        resizeHandles = [];
-        hideSelectionTooltip();
-    }
-    function onTouchMove(e) {
-        e.preventDefault();
-        if (!startLatLng) return;
-        const latlng = getLatLngFromTouch(e.touches[0]);
-        if (selectionRectangle) map.removeLayer(selectionRectangle);
-        selectionRectangle = L.rectangle([startLatLng, latlng], {
-            color: '#3498db', weight: 2,
-            fillColor: '#3498db', fillOpacity: 0.15, dashArray: '6, 4'
-        }).addTo(map);
-    }
-    function onTouchEnd(e) {
-        e.preventDefault();
-        if (!startLatLng) return;
-        const latlng = getLatLngFromTouch(e.changedTouches[0]);
-        const tooSmall = Math.abs(startLatLng.lat - latlng.lat) < 0.001 &&
-                         Math.abs(startLatLng.lng - latlng.lng) < 0.001;
-        if (tooSmall) { startLatLng = null; return; }
-        const bounds = L.latLngBounds(startLatLng, latlng);
-        startLatLng = null;
-        mapBoundsFilter = bounds;
-        exitSelectionMode();
-        document.getElementById('bounds-clear-btn').style.display = 'inline-block';
-        filterGalleryByBounds(bounds);
-        if (selectionRectangle) addResizeHandles(selectionRectangle);
-    }
-
     map.on('mousedown', onMouseDown);
     map.on('mousemove', onMouseMove);
     map.on('mouseup', onMouseUp);
-
-    const container = map.getContainer();
-container._onTouchStart = onTouchStart;
-container._onTouchMove = onTouchMove;
-container._onTouchEnd = onTouchEnd;
-container.addEventListener('touchstart', onTouchStart, { passive: false });
-container.addEventListener('touchmove', onTouchMove, { passive: false });
-container.addEventListener('touchend', onTouchEnd, { passive: false });
-
-    map._rectHandlers = { onMouseDown, onMouseMove, onMouseUp, onTouchStart, onTouchMove, onTouchEnd };
+    map._rectHandlers = { onMouseDown, onMouseMove, onMouseUp };
 }
+
+
 function exitSelectionMode() {
     if (map._rectHandlers) {
         map.off('mousedown', map._rectHandlers.onMouseDown);
         map.off('mousemove', map._rectHandlers.onMouseMove);
         map.off('mouseup', map._rectHandlers.onMouseUp);
-       const container = map.getContainer();
-container.removeEventListener('touchstart', map._rectHandlers.onTouchStart);
-container.removeEventListener('touchmove', map._rectHandlers.onTouchMove);
-container.removeEventListener('touchend', map._rectHandlers.onTouchEnd);
         map._rectHandlers = null;
     }
     activeSelectionMode = null;
