@@ -1,3 +1,15 @@
+function loadLeafletDraw(callback) {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js';
+    script.onload = function() {
+        console.log('Leaflet.draw loaded successfully');
+        callback();
+    };
+    script.onerror = function() {
+        console.error('Failed to load Leaflet.draw');
+    };
+    document.head.appendChild(script);
+}
 let map;
 let observations = [];
 let markers = [];
@@ -1066,8 +1078,10 @@ function initializeMapSimple() {
     if (typeof map === 'undefined') {
         const mapDiv = document.getElementById('map');
         if (mapDiv && typeof L !== 'undefined') {
-            console.log('Initializing map...');
-            initMap();
+    console.log('Initializing map...');
+    loadLeafletDraw(() => {
+        initMap();
+    });
         } else {
             console.log('Map div or Leaflet not ready, retrying...');
             return false;
