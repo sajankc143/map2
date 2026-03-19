@@ -92,85 +92,100 @@ function enterRectangleMode() {
     map.dragging.disable();
     map.getContainer().style.cursor = 'crosshair';
     document.getElementById('bounds-rect-btn').style.background = 'rgba(231,76,60,0.85)';
-    
-    // Show tooltip so user knows mode is active
     showSelectionTooltip('Drag to draw a selection rectangle');
 
     let startLatLng = null;
 
-    function getLatLng(e) {
-        if (e.latlng) return e.latlng;
-        const src = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : null);
-        if (!src) return null;
-        const rect = map.getContainer().getBoundingClientRect();
-        return map.containerPointToLatLng(L.point(src.clientX - rect.left, src.clientY - rect.top));
+    function getLatLngFromTouch(touch) {
+        const r = map.getContainer().getBoundingClientRect();
+        return map.containerPointToLatLng(L.point(touch.clientX - r.left, touch.clientY - r.top));
     }
 
-    function onStart(e) {
-        const latlng = getLatLng(e);
-        if (!latlng) return;
-        startLatLng = latlng;
+    // ── MOUSE (desktop) ──
+    function onMouseDown(e) {
+        startLatLng = e.latlng;
         if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
         resizeHandles.forEach(h => map.removeLayer(h));
         resizeHandles = [];
         hideSelectionTooltip();
     }
-
-    function onMove(e) {
+    function onMouseMove(e) {
         if (!startLatLng) return;
-        const latlng = getLatLng(e);
-        if (!latlng) return;
         if (selectionRectangle) map.removeLayer(selectionRectangle);
-        selectionRectangle = L.rectangle([startLatLng, latlng], {
+        selectionRectangle = L.rectangle([startLatLng, e.latlng], {
             color: '#3498db', weight: 2,
             fillColor: '#3498db', fillOpacity: 0.15, dashArray: '6, 4'
         }).addTo(map);
     }
-
-    function onEnd(e) {
+    function onMouseUp(e) {
         if (!startLatLng) return;
-        const src = e.changedTouches ? e.changedTouches[0] : null;
-        const latlng = src ?
-            map.containerPointToLatLng(L.point(
-                src.clientX - map.getContainer().getBoundingClientRect().left,
-                src.clientY - map.getContainer().getBoundingClientRect().top
-            )) : getLatLng(e);
-        if (!latlng) return;
-
-        const tooSmall = Math.abs(startLatLng.lat - latlng.lat) < 0.001 &&
-                         Math.abs(startLatLng.lng - latlng.lng) < 0.001;
+        const tooSmall = Math.abs(startLatLng.lat - e.latlng.lat) < 0.001 &&
+                         Math.abs(startLatLng.lng - e.latlng.lng) < 0.001;
         if (tooSmall) { startLatLng = null; return; }
-
-        const bounds = L.latLngBounds(startLatLng, latlng);
+        const bounds = L.latLngBounds(startLatLng, e.latlng);
         startLatLng = null;
         mapBoundsFilter = bounds;
-
         exitSelectionMode();
         document.getElementById('bounds-clear-btn').style.display = 'inline-block';
         filterGalleryByBounds(bounds);
         if (selectionRectangle) addResizeHandles(selectionRectangle);
     }
 
+    // ── TOUCH (mobile) ──
+    function onTouchStart(e) {
+        e.preventDefault();
+        startLatLng = getLatLngFromTouch(e.touches[0]);
+        if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
+        resizeHandles.forEach(h => map.removeLayer(h));
+        resizeHandles = [];
+        hideSelectionTooltip();
+    }
+    function onTouchMove(e) {
+        e.preventDefault();
+        if (!startLatLng) return;
+        const latlng = getLatLngFromTouch(e.touches[0]);
+        if (selectionRectangle) map.removeLayer(selectionRectangle);
+        selectionRectangle = L.rectangle([startLatLng, latlng], {
+            color: '#3498db', weight: 2,
+            fillColor: '#3498db', fillOpacity: 0.15, dashArray: '6, 4'
+        }).addTo(map);
+    }
+    function onTouchEnd(e) {
+        e.preventDefault();
+        if (!startLatLng) return;
+        const latlng = getLatLngFromTouch(e.changedTouches[0]);
+        const tooSmall = Math.abs(startLatLng.lat - latlng.lat) < 0.001 &&
+                         Math.abs(startLatLng.lng - latlng.lng) < 0.001;
+        if (tooSmall) { startLatLng = null; return; }
+        const bounds = L.latLngBounds(startLatLng, latlng);
+        startLatLng = null;
+        mapBoundsFilter = bounds;
+        exitSelectionMode();
+        document.getElementById('bounds-clear-btn').style.display = 'inline-block';
+        filterGalleryByBounds(bounds);
+        if (selectionRectangle) addResizeHandles(selectionRectangle);
+    }
+
+    map.on('mousedown', onMouseDown);
+    map.on('mousemove', onMouseMove);
+    map.on('mouseup', onMouseUp);
+
     const container = map.getContainer();
-    container.addEventListener('touchstart', onStart, { passive: false });
-    container.addEventListener('touchmove', onMove, { passive: false });
-    container.addEventListener('touchend', onEnd, { passive: false });
-    map.on('mousedown', onStart);
-    map.on('mousemove', onMove);
-    map.on('mouseup', onEnd);
+    container.addEventListener('touchstart', onTouchStart, { passive: false });
+    container.addEventListener('touchmove', onTouchMove, { passive: false });
+    container.addEventListener('touchend', onTouchEnd, { passive: false });
 
-    map._rectHandlers = { onStart, onMove, onEnd };
+    map._rectHandlers = { onMouseDown, onMouseMove, onMouseUp, onTouchStart, onTouchMove, onTouchEnd };
 }
-
 function exitSelectionMode() {
     if (map._rectHandlers) {
-        map.off('mousedown', map._rectHandlers.onStart);
-        map.off('mousemove', map._rectHandlers.onMove);
-        map.off('mouseup', map._rectHandlers.onEnd);
+        map.off('mousedown', map._rectHandlers.onMouseDown);
+        map.off('mousemove', map._rectHandlers.onMouseMove);
+        map.off('mouseup', map._rectHandlers.onMouseUp);
         const container = map.getContainer();
-        container.removeEventListener('touchstart', map._rectHandlers.onStart);
-        container.removeEventListener('touchmove', map._rectHandlers.onMove);
-        container.removeEventListener('touchend', map._rectHandlers.onEnd);
+        container.removeEventListener('touchstart', map._rectHandlers.onTouchStart);
+        container.removeEventListener('touchmove', map._rectHandlers.onTouchMove);
+        container.removeEventListener('touchend', map._rectHandlers.onTouchEnd);
         map._rectHandlers = null;
     }
     activeSelectionMode = null;
