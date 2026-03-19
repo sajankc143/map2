@@ -243,11 +243,16 @@ const drawControl = new L.Control.Draw({
 });
 map.addControl(drawControl);
 
-map.on(L.Draw.Event.CREATED, function(e) {
+map.on('draw:created', function(e) {
     drawnItems.clearLayers();
     drawnItems.addLayer(e.layer);
     const bounds = e.layer.getBounds();
+    console.log('Rectangle drawn, bounds:', bounds);
     filterGalleryByBounds(bounds);
+});
+
+map.on('draw:deleted', function() {
+    clearBoundsFilter();
 });
 
 map.on(L.Draw.Event.DELETED, function() {
