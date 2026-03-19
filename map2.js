@@ -110,22 +110,21 @@ function enterRectangleMode() {
         }).addTo(map);
     }
 
-    function onMouseUp(e) {
-        if (!startLatLng) return;
-        const tooSmall = Math.abs(startLatLng.lat - e.latlng.lat) < 0.001 &&
-                         Math.abs(startLatLng.lng - e.latlng.lng) < 0.001;
-        if (tooSmall) { startLatLng = null; return; }
+   function onMouseUp(e) {
+    if (!startLatLng) return;
+    const tooSmall = Math.abs(startLatLng.lat - e.latlng.lat) < 0.001 &&
+                     Math.abs(startLatLng.lng - e.latlng.lng) < 0.001;
+    if (tooSmall) { startLatLng = null; return; }
 
-        const bounds = L.latLngBounds(startLatLng, e.latlng);
-        startLatLng = null;
-        mapBoundsFilter = bounds;
+    const bounds = L.latLngBounds(startLatLng, e.latlng);
+    startLatLng = null;
+    mapBoundsFilter = bounds;
 
-        exitSelectionMode();
-        document.getElementById('bounds-clear-btn').style.display = 'inline-block';
+    exitSelectionMode();
+    document.getElementById('bounds-clear-btn').style.display = 'inline-block';
 
-        // Call function defined in the HTML page
-        filterGalleryByBounds(bounds);
-    }
+    filterGalleryByBounds(bounds);  // ← this line was missing
+}
 
     map._rectHandlers = { onMouseDown, onMouseMove, onMouseUp };
     map.on('mousedown', onMouseDown);
