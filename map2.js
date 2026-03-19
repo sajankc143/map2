@@ -194,9 +194,7 @@ function exitSelectionMode() {
 function applyBoundsFilterToGallery() {
     if (!window.infiniteGalleryUpdater || !mapBoundsFilter) return;
 
-    const source = infiniteGalleryUpdater.allImages;
-
-    const filtered = source.filter(image => {
+    const filtered = infiniteGalleryUpdater.allImages.filter(image => {
         const coords = parseCoordinates(image.originalTitle || image.fullTitle);
         if (!coords) return false;
 
@@ -212,22 +210,26 @@ function applyBoundsFilterToGallery() {
 
     console.log(`Bounds filter: ${filtered.length} observations in selected area`);
 
-    // Switch to all-observations view so the gallery renders correctly
-    infiniteGalleryUpdater.currentView = 'all';
-    infiniteGalleryUpdater.currentSpecies = null;
-    infiniteGalleryUpdater.currentPage = 1;
+    // Call the bridge function defined in the HTML page
+    if (typeof applyMapBoundsToGallery === 'function') {
+        applyMapBoundsToGallery(filtered);
+    }
 
-    // Set both filteredImages AND a dummy searchParams so the gallery
-    // knows a filter is active and doesn't reset on re-render
-    infiniteGalleryUpdater.filteredImages = filtered;
-    infiniteGalleryUpdater.currentSearchParams = { mapBoundsActive: true };
-
-    // Scroll gallery into view
-    const container = document.querySelector('#infinite-gallery-container');
-    if (container) container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    infiniteGalleryUpdater.updateInfiniteGalleryContainer();
     syncMapWithSearchResults(filtered);
+}
+
+function clearBoundsFilter() {
+    mapBoundsFilter = null;
+    clearSelectionShapes();
+    hideClearButton();
+
+    if (typeof clearMapBoundsFromGallery === 'function') {
+        clearMapBoundsFromGallery();
+    }
+
+    if (window.infiniteGalleryUpdater) {
+        syncMapWithSearchResults(infiniteGalleryUpdater.allImages);
+    }
 }
 // Point-in-polygon using ray casting
 function pointInPolygon(latlng, polygonLatLngs) {
@@ -243,30 +245,7 @@ function pointInPolygon(latlng, polygonLatLngs) {
     return inside;
 }
 
-function clearBoundsFilter() {
-    mapBoundsFilter = null;
-    clearSelectionShapes();
-    hideClearButton();
 
-    if (!window.infiniteGalleryUpdater) return;
-
-    infiniteGalleryUpdater.currentView = 'all';
-    infiniteGalleryUpdater.currentSpecies = null;
-    infiniteGalleryUpdater.currentSearchParams = null;
-    infiniteGalleryUpdater.filteredImages = [...infiniteGalleryUpdater.allImages];
-    infiniteGalleryUpdater.currentPage = 1;
-
-    // Reset search form fields
-    ['family-search', 'species-search', 'location-search'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = el.tagName === 'SELECT' ? 'all' : '';
-    });
-    const dateType = document.getElementById('date-filter-type');
-    if (dateType) dateType.value = 'all';
-
-    infiniteGalleryUpdater.updateInfiniteGalleryContainer();
-    syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
-}
 function clearSelectionShapes() {
     if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
     if (selectionPolygon)   { map.removeLayer(selectionPolygon);   selectionPolygon = null; }
