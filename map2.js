@@ -5,11 +5,283 @@ let markerGroup;
 let isLoading = false;
 let geocoder = null;
 let isViewingSingleObservation = false; // Add this flag
+let selectionRectangle = null;
+let selectionPolygon = null;
+let isDrawingSelection = false;
+let isDrawingPolygon = false;
+let selectionStartPoint = null;
+let mapBoundsFilter = null;
+let activeSelectionMode = null; // 'rectangle' or 'polygon'
+let polygonPoints = [];
+let polygonPolyline = null;
+let polygonClickHandlers = null;
 
 const sourceUrls = [
     "https://www.butterflyexplorers.com/p/new-butterflies.html",
     
 ];
+function initBoundsSelectionTool() {
+    const rectBtn = document.getElementById('bounds-rect-btn');
+    const polyBtn = document.getElementById('bounds-poly-btn');
+    const clearBtn = document.getElementById('bounds-clear-btn');
+
+    if (rectBtn) rectBtn.addEventListener('click', () => {
+        if (activeSelectionMode === 'rectangle') {
+            exitSelectionMode();
+        } else {
+            exitSelectionMode();
+            enterRectangleMode();
+        }
+    });
+
+    if (polyBtn) polyBtn.addEventListener('click', () => {
+        if (activeSelectionMode === 'polygon') {
+            exitSelectionMode();
+        } else {
+            exitSelectionMode();
+            enterPolygonMode();
+        }
+    });
+
+    if (clearBtn) clearBtn.addEventListener('click', clearBoundsFilter);
+}
+
+// ── RECTANGLE MODE ──────────────────────────────────────────────
+function enterRectangleMode() {
+    activeSelectionMode = 'rectangle';
+    map.dragging.disable();
+    map.getContainer().style.cursor = 'crosshair';
+    setButtonActive('bounds-rect-btn', true);
+
+    let startLatLng = null;
+
+    function onMouseDown(e) {
+        startLatLng = e.latlng;
+        clearSelectionShapes();
+    }
+
+    function onMouseMove(e) {
+        if (!startLatLng) return;
+        if (selectionRectangle) map.removeLayer(selectionRectangle);
+        selectionRectangle = L.rectangle([startLatLng, e.latlng], {
+            color: '#3498db',
+            weight: 2,
+            fillColor: '#3498db',
+            fillOpacity: 0.15,
+            dashArray: '6, 4'
+        }).addTo(map);
+    }
+
+    function onMouseUp(e) {
+        if (!startLatLng) return;
+
+        const tooSmall = Math.abs(startLatLng.lat - e.latlng.lat) < 0.001 &&
+                         Math.abs(startLatLng.lng - e.latlng.lng) < 0.001;
+        if (tooSmall) { startLatLng = null; return; }
+
+        const bounds = L.latLngBounds(startLatLng, e.latlng);
+        startLatLng = null;
+        mapBoundsFilter = { type: 'rectangle', bounds };
+
+        exitSelectionMode();
+        applyBoundsFilterToGallery();
+        showClearButton();
+    }
+
+    map._rectHandlers = { onMouseDown, onMouseMove, onMouseUp };
+    map.on('mousedown', onMouseDown);
+    map.on('mousemove', onMouseMove);
+    map.on('mouseup', onMouseUp);
+}
+
+// ── POLYGON MODE ─────────────────────────────────────────────────
+function enterPolygonMode() {
+    activeSelectionMode = 'polygon';
+    map.dragging.disable();
+    map.getContainer().style.cursor = 'crosshair';
+    setButtonActive('bounds-poly-btn', true);
+    polygonPoints = [];
+
+    // Show instruction tooltip
+    showMapTooltip('Click to add points. Double-click to close polygon.');
+
+    function onMapClick(e) {
+        polygonPoints.push(e.latlng);
+
+        // Redraw preview polyline
+        if (polygonPolyline) map.removeLayer(polygonPolyline);
+        if (polygonPoints.length > 1) {
+            polygonPolyline = L.polyline(polygonPoints, {
+                color: '#e67e22',
+                weight: 2,
+                dashArray: '6, 4'
+            }).addTo(map);
+        } else {
+            // First point marker
+            polygonPolyline = L.circleMarker(e.latlng, {
+                radius: 5,
+                color: '#e67e22',
+                fillColor: '#e67e22',
+                fillOpacity: 1
+            }).addTo(map);
+        }
+    }
+
+    function onMapDblClick(e) {
+        if (polygonPoints.length < 3) {
+            showMapTooltip('Need at least 3 points to close a polygon.', 2000);
+            return;
+        }
+
+        // Close and draw final polygon
+        if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
+        clearSelectionShapes();
+
+        selectionPolygon = L.polygon(polygonPoints, {
+            color: '#e67e22',
+            weight: 2,
+            fillColor: '#e67e22',
+            fillOpacity: 0.15,
+            dashArray: '6, 4'
+        }).addTo(map);
+
+        mapBoundsFilter = { type: 'polygon', points: [...polygonPoints] };
+        polygonPoints = [];
+
+        exitSelectionMode();
+        applyBoundsFilterToGallery();
+        showClearButton();
+        hideMapTooltip();
+    }
+
+    polygonClickHandlers = { onMapClick, onMapDblClick };
+    map.on('click', onMapClick);
+    map.on('dblclick', onMapDblClick);
+}
+
+// ── EXIT / CLEANUP ───────────────────────────────────────────────
+function exitSelectionMode() {
+    // Remove rectangle handlers
+    if (map._rectHandlers) {
+        map.off('mousedown', map._rectHandlers.onMouseDown);
+        map.off('mousemove', map._rectHandlers.onMouseMove);
+        map.off('mouseup', map._rectHandlers.onMouseUp);
+        map._rectHandlers = null;
+    }
+
+    // Remove polygon handlers
+    if (polygonClickHandlers) {
+        map.off('click', polygonClickHandlers.onMapClick);
+        map.off('dblclick', polygonClickHandlers.onMapDblClick);
+        polygonClickHandlers = null;
+    }
+
+    // Clean up incomplete polygon preview
+    if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
+    polygonPoints = [];
+
+    activeSelectionMode = null;
+    isDrawingSelection = false;
+    map.dragging.enable();
+    map.getContainer().style.cursor = '';
+    hideMapTooltip();
+
+    setButtonActive('bounds-rect-btn', false);
+    setButtonActive('bounds-poly-btn', false);
+}
+
+// ── FILTER LOGIC ─────────────────────────────────────────────────
+function applyBoundsFilterToGallery() {
+    if (!window.infiniteGalleryUpdater || !mapBoundsFilter) return;
+
+    const source = infiniteGalleryUpdater.allImages;
+
+    const filtered = source.filter(image => {
+        const coords = parseCoordinates(image.originalTitle || image.fullTitle);
+        if (!coords) return false;
+
+        const latlng = L.latLng(coords[0], coords[1]);
+
+        if (mapBoundsFilter.type === 'rectangle') {
+            return mapBoundsFilter.bounds.contains(latlng);
+        } else if (mapBoundsFilter.type === 'polygon') {
+            return pointInPolygon(latlng, mapBoundsFilter.points);
+        }
+        return false;
+    });
+
+    infiniteGalleryUpdater.filteredImages = filtered;
+    infiniteGalleryUpdater.currentPage = 1;
+    infiniteGalleryUpdater.updateResultsOnly();
+    syncMapWithSearchResults(filtered);
+
+    console.log(`Bounds filter: ${filtered.length} observations in selected area`);
+}
+
+// Point-in-polygon using ray casting
+function pointInPolygon(latlng, polygonLatLngs) {
+    const x = latlng.lng, y = latlng.lat;
+    let inside = false;
+    for (let i = 0, j = polygonLatLngs.length - 1; i < polygonLatLngs.length; j = i++) {
+        const xi = polygonLatLngs[i].lng, yi = polygonLatLngs[i].lat;
+        const xj = polygonLatLngs[j].lng, yj = polygonLatLngs[j].lat;
+        const intersect = ((yi > y) !== (yj > y)) &&
+                          (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+function clearBoundsFilter() {
+    mapBoundsFilter = null;
+    clearSelectionShapes();
+    hideClearButton();
+
+    if (!window.infiniteGalleryUpdater) return;
+
+    // Reset to ALL observations regardless of previous filters
+    infiniteGalleryUpdater.filteredImages = [...infiniteGalleryUpdater.allImages];
+    infiniteGalleryUpdater.currentSearchParams = null;
+    infiniteGalleryUpdater.currentPage = 1;
+
+    // Reset search form fields
+    const fields = ['family-search', 'species-search', 'location-search', 'date-filter-type'];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = el.tagName === 'SELECT' ? (id === 'family-search' ? 'all' : 'all') : '';
+    });
+
+    infiniteGalleryUpdater.updateResultsOnly();
+    syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+}
+
+function clearSelectionShapes() {
+    if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
+    if (selectionPolygon)   { map.removeLayer(selectionPolygon);   selectionPolygon = null; }
+}
+
+// ── UI HELPERS ───────────────────────────────────────────────────
+function setButtonActive(id, active) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.style.background = active
+        ? 'rgba(231, 76, 60, 0.85)'
+        : 'rgba(255,255,255,0.15)';
+}
+
+function showClearButton() {
+    const btn = document.getElementById('bounds-clear-btn');
+    if (btn) btn.style.display = 'inline-block';
+}
+
+function hideClearButton() {
+    const btn = document.getElementById('bounds-clear-btn');
+    if (btn) btn.style.display = 'none';
+}
+
+function showMapTooltip(text, autoDismissMs = null) {
+    let tip = document.getElementById('map-draw-tooltip');
+    if (!tip) {
 function showObservationOnMap(observationData) {
     if (!map || !observationData) return;
     
@@ -204,7 +476,32 @@ function initMap() {
 
     // Add the custom toggle control
     map.addControl(new mapToggleControl());
+const boundsSelectControl = L.Control.extend({
+    options: { position: 'topleft' },
+    onAdd: function() {
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+        container.style.cssText = 'display:flex; flex-direction:column; gap:4px; background:none; border:none; box-shadow:none;';
 
+        const btnStyle = `
+            border: 1px solid rgba(255,255,255,0.3); border-radius: 10px; color: white;
+            padding: 8px 12px; cursor: pointer; font-size: 13px; font-weight: 600;
+            backdrop-filter: blur(10px); white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2); transition: background 0.2s ease;
+        `;
+
+        container.innerHTML = `
+            <button id="bounds-rect-btn" title="Drag to select rectangular area" style="background:rgba(255,255,255,0.15);${btnStyle}">⬚ Rectangle</button>
+            <button id="bounds-poly-btn" title="Click points to draw polygon area" style="background:rgba(255,255,255,0.15);${btnStyle}">⬡ Polygon</button>
+            <button id="bounds-clear-btn" title="Clear area filter" style="display:none; background:rgba(231,76,60,0.8);${btnStyle}">✕ Clear Filter</button>
+        `;
+
+        L.DomEvent.disableClickPropagation(container);
+        return container;
+    }
+});
+map.addControl(new boundsSelectControl());
+
+setTimeout(initBoundsSelectionTool, 100);
     markerGroup = L.layerGroup().addTo(map);
     
     // Add zoom event listener for responsive marker sizing
