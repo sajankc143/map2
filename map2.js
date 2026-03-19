@@ -290,9 +290,9 @@ function initMap() {
     onAdd: function() {
         const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
         container.style.cssText = 'display:flex;flex-direction:column;gap:4px;background:none;border:none;box-shadow:none;';
-        const btnStyle = `border:1px solid rgba(255,255,255,0.3);border-radius:10px;color:white;
-            padding:8px 12px;cursor:pointer;font-size:13px;font-weight:600;
-            backdrop-filter:blur(10px);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);`;
+        const btnStyle = `border:1px solid rgba(255,255,255,0.5);border-radius:10px;color:white;
+    padding:8px 12px;cursor:pointer;font-size:13px;font-weight:600;
+    white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.5);`;
         container.innerHTML = `
             <button id="bounds-rect-btn" style="background:rgba(0,0,0,0.6);${btnStyle}">⬚ Select Area</button>
             <button id="bounds-clear-btn" style="display:none;background:rgba(231,76,60,1);${btnStyle}">✕ Clear Filter</button>
