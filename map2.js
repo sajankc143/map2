@@ -330,12 +330,16 @@ function filterGalleryByBounds(bounds) {
     const filtered = infiniteGalleryUpdater.allImages.filter(img => {
         const coords = parseCoordinates(img.originalTitle || img.fullTitle);
         if (!coords) return false;
-        return bounds.contains(coords);
+        const latLng = L.latLng(coords[0], coords[1]);
+        return bounds.contains(latLng);
     });
 
     infiniteGalleryUpdater.filteredImages = filtered;
     infiniteGalleryUpdater.currentPage = 1;
     infiniteGalleryUpdater.updateResultsOnly();
+
+    // Also update map markers to only show filtered
+    syncMapWithSearchResults(filtered);
 
     console.log(`Bounds filter: ${filtered.length} observations in selected area`);
 }
