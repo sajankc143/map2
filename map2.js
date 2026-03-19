@@ -140,6 +140,9 @@ function clearBoundsFilter() {
     resizeHandles.forEach(h => map.removeLayer(h));
     resizeHandles = [];
     document.getElementById('bounds-clear-btn').style.display = 'none';
+    if (window.infiniteGalleryUpdater) {
+        infiniteGalleryUpdater.boundsFilteredImages = null;
+    }
     filterGalleryByBounds(null);
 }
 function showObservationOnMap(observationData) {
