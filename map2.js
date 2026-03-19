@@ -13,6 +13,68 @@ const sourceUrls = [
     "https://www.butterflyexplorers.com/p/new-butterflies.html",
     
 ];
+function addResizeHandles(rect) {
+    clearResizeHandles();
+    const bounds = rect.getBounds();
+    const corners = [
+        bounds.getNorthWest(), bounds.getNorthEast(),
+        bounds.getSouthEast(), bounds.getSouthWest()
+    ];
+
+    corners.forEach((corner, i) => {
+        const handle = L.circleMarker(corner, {
+            radius: 8,
+            color: '#fff',
+            fillColor: '#3498db',
+            fillOpacity: 1,
+            weight: 2,
+            draggable: true
+        }).addTo(map);
+
+        handle.on('mousedown', function(e) {
+            L.DomEvent.stop(e);
+            map.dragging.disable();
+            const oppositeCorner = corners[(i + 2) % 4];
+
+            function onMove(e) {
+                const newBounds = L.latLngBounds(e.latlng, oppositeCorner);
+                rect.setBounds(newBounds);
+                // reposition all handles
+                const nb = rect.getBounds();
+                const newCorners = [
+                    nb.getNorthWest(), nb.getNorthEast(),
+                    nb.getSouthEast(), nb.getSouthWest()
+                ];
+                resizeHandles.forEach((h, idx) => h.setLatLng(newCorners[idx]));
+            }
+
+            function onUp(e) {
+                map.off('mousemove', onMove);
+                map.off('mouseup', onUp);
+                map.dragging.enable();
+                const newBounds = rect.getBounds();
+                mapBoundsFilter = newBounds;
+                document.getElementById('bounds-clear-btn').style.display = 'inline-block';
+                filterGalleryByBounds(newBounds);
+            }
+
+            map.on('mousemove', onMove);
+            map.on('mouseup', onUp);
+        });
+
+        resizeHandles.push(handle);
+    });
+}
+
+function clearResizeHandles() {
+    resizeHandles.forEach(h => map.removeLayer(h));
+    resizeHandles = [];
+}
+
+function clearSelectionShapes() {
+    if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
+    clearResizeHandles();
+}
 function initBoundsSelectionTool() {
     const rectBtn = document.getElementById('bounds-rect-btn');
     const clearBtn = document.getElementById('bounds-clear-btn');
@@ -83,11 +145,12 @@ function exitSelectionMode() {
     map.getContainer().style.cursor = '';
     const btn = document.getElementById('bounds-rect-btn');
     if (btn) btn.style.background = 'rgba(255,255,255,0.15)';
+    if (selectionRectangle) addResizeHandles(selectionRectangle);
 }
 
 function clearBoundsFilter() {
     mapBoundsFilter = null;
-    if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
+    clearSelectionShapes();
     document.getElementById('bounds-clear-btn').style.display = 'none';
     filterGalleryByBounds(null); // null = reset
 }
