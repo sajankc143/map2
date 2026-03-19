@@ -208,7 +208,7 @@ function initMap() {
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     
     map = L.map('map', {
-        preferCanvas: true,
+        preferCanvas: false,
         zoomAnimation: true,
         fadeAnimation: true,
         markerZoomAnimation: true,
