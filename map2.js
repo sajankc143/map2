@@ -1,15 +1,3 @@
-function loadLeafletDraw(callback) {
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js';
-    script.onload = function() {
-        console.log('Leaflet.draw loaded successfully');
-        callback();
-    };
-    script.onerror = function() {
-        console.error('Failed to load Leaflet.draw');
-    };
-    document.head.appendChild(script);
-}
 let map;
 let observations = [];
 let markers = [];
@@ -218,46 +206,9 @@ function initMap() {
     map.addControl(new mapToggleControl());
 
     markerGroup = L.layerGroup().addTo(map);
-
-// Add zoom event listener for responsive marker sizing
-map.on('zoomend', updateMarkerSizes);
-
-// Bounding box selection
-const drawnItems = new L.FeatureGroup();
-map.addLayer(drawnItems);
-
-const drawControl = new L.Control.Draw({
-    position: 'topleft',
-    draw: {
-        rectangle: true,
-        polygon: false,
-        circle: false,
-        marker: false,
-        polyline: false,
-        circlemarker: false
-    },
-    edit: {
-        featureGroup: drawnItems,
-        remove: true
-    }
-});
-map.addControl(drawControl);
-
-map.on('draw:created', function(e) {
-    drawnItems.clearLayers();
-    drawnItems.addLayer(e.layer);
-    const bounds = e.layer.getBounds();
-    console.log('Rectangle drawn, bounds:', bounds);
-    filterGalleryByBounds(bounds);
-});
-
-map.on('draw:deleted', function() {
-    clearBoundsFilter();
-});
-
-map.on(L.Draw.Event.DELETED, function() {
-    clearBoundsFilter();
-});
+    
+    // Add zoom event listener for responsive marker sizing
+    map.on('zoomend', updateMarkerSizes);
 
     const speciesFilter = document.getElementById('speciesFilter');
     if (speciesFilter) {
@@ -328,54 +279,6 @@ function syncMapWithSearchResults(searchFilteredImages) {
     // Update the map display
     displayObservations();
     console.log(`Map synced with ${observations.length} observations from search results`);
-}
-function filterGalleryByBounds(bounds) {
-    if (!window.infiniteGalleryUpdater) return;
-
-    const filtered = infiniteGalleryUpdater.allImages.filter(img => {
-        const coords = parseCoordinates(img.originalTitle || img.fullTitle);
-        if (!coords) return false;
-        const latLng = L.latLng(coords[0], coords[1]);
-        return bounds.contains(latLng);
-    });
-
-    console.log(`Bounds filter: ${filtered.length} observations in selected area`);
-
-    // Update gallery
-    infiniteGalleryUpdater.filteredImages = filtered;
-    infiniteGalleryUpdater.currentPage = 1;
-    infiniteGalleryUpdater.updateResultsOnly();
-
-    // Update map markers — clear first then show only filtered
-    markerGroup.clearLayers();
-    observations = [];
-    filtered.forEach(img => {
-        const coords = parseCoordinates(img.originalTitle || img.fullTitle);
-        if (!coords) return;
-        observations.push({
-            species: img.species,
-            commonName: img.commonName,
-            coordinates: coords,
-            location: img.location || '',
-            date: img.date || '',
-            imageUrl: img.thumbnailUrl,
-            fullImageUrl: img.fullImageUrl,
-            sourceUrl: img.sourceUrl,
-            originalTitle: img.originalTitle || img.fullTitle
-        });
-    });
-
-    displayObservations();
-}
-
-function clearBoundsFilter() {
-    if (!window.infiniteGalleryUpdater) return;
-
-    infiniteGalleryUpdater.filteredImages = [...infiniteGalleryUpdater.allImages];
-    infiniteGalleryUpdater.currentPage = 1;
-    infiniteGalleryUpdater.updateResultsOnly();
-
-    console.log('Bounds filter cleared');
 }
 
 // Simplified function to initialize location search controls
@@ -1106,10 +1009,8 @@ function initializeMapSimple() {
     if (typeof map === 'undefined') {
         const mapDiv = document.getElementById('map');
         if (mapDiv && typeof L !== 'undefined') {
-    console.log('Initializing map...');
-    loadLeafletDraw(() => {
-        initMap();
-    });
+            console.log('Initializing map...');
+            initMap();
         } else {
             console.log('Map div or Leaflet not ready, retrying...');
             return false;
