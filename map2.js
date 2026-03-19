@@ -17,33 +17,37 @@ const sourceUrls = [
 function addResizeHandles(rect) {
     resizeHandles.forEach(h => map.removeLayer(h));
     resizeHandles = [];
-    
-    const bounds = rect.getBounds();
-    const corners = [
-        bounds.getNorthWest(), bounds.getNorthEast(),
-        bounds.getSouthEast(), bounds.getSouthWest()
-    ];
 
-    corners.forEach((corner, i) => {
+    function getCorners() {
+        const b = rect.getBounds();
+        return [b.getNorthWest(), b.getNorthEast(), b.getSouthEast(), b.getSouthWest()];
+    }
+
+    getCorners().forEach((corner, i) => {
         const handle = L.circleMarker(corner, {
             radius: 8, color: '#fff',
-            fillColor: '#3498db', fillOpacity: 1, weight: 2
+            fillColor: '#3498db', fillOpacity: 1, weight: 2,
+            pane: 'markerPane'
         }).addTo(map);
 
+        handle.getElement().style.cursor = 'pointer';
+
         handle.on('mousedown', function(e) {
-            L.DomEvent.stop(e);
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
             map.dragging.disable();
-            const oppositeCorner = corners[(i + 2) % 4];
+
+            const currentCorners = getCorners();
+            const oppositeCorner = currentCorners[(i + 2) % 4];
 
             function onMove(e) {
                 const newBounds = L.latLngBounds(e.latlng, oppositeCorner);
                 rect.setBounds(newBounds);
-                const nb = rect.getBounds();
-                const newCorners = [nb.getNorthWest(), nb.getNorthEast(), nb.getSouthEast(), nb.getSouthWest()];
-                resizeHandles.forEach((h, idx) => h.setLatLng(newCorners[idx]));
+                const updated = getCorners();
+                resizeHandles.forEach((h, idx) => h.setLatLng(updated[idx]));
             }
 
-            function onUp() {
+            function onUp(e) {
                 map.off('mousemove', onMove);
                 map.off('mouseup', onUp);
                 map.dragging.enable();
