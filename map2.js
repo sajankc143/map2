@@ -18,6 +18,8 @@ function addResizeHandles(rect) {
     resizeHandles.forEach(h => map.removeLayer(h));
     resizeHandles = [];
 
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
     function getCorners() {
         const b = rect.getBounds();
         return [b.getNorthWest(), b.getNorthEast(), b.getSouthEast(), b.getSouthWest()];
@@ -25,10 +27,13 @@ function addResizeHandles(rect) {
 
     getCorners().forEach((corner, i) => {
         const handle = L.circleMarker(corner, {
-            radius: 10, color: '#fff',
+            radius: isTouchDevice ? 20 : 10,
+            color: '#fff',
             fillColor: '#3498db', fillOpacity: 1, weight: 2,
             pane: 'markerPane'
         }).addTo(map);
+
+        if (handle.getElement()) handle.getElement().style.cursor = 'pointer';
 
         function startDrag(e) {
             L.DomEvent.stopPropagation(e);
