@@ -135,6 +135,7 @@ function exitSelectionMode() {
 
 function clearBoundsFilter() {
     mapBoundsFilter = null;
+    window._skipFitBounds = true;
     if (selectionRectangle) { map.removeLayer(selectionRectangle); selectionRectangle = null; }
     resizeHandles.forEach(h => map.removeLayer(h));
     resizeHandles = [];
@@ -989,10 +990,11 @@ function displayObservations() {
         marker.addTo(markerGroup);
     });
 
-    if (filteredObs.length > 0) {
-        const group = new L.featureGroup(markerGroup.getLayers());
-        map.fitBounds(group.getBounds().pad(0.1));
-    }
+   if (filteredObs.length > 0 && !window._skipFitBounds) {
+    const group = new L.featureGroup(markerGroup.getLayers());
+    map.fitBounds(group.getBounds().pad(0.1));
+}
+window._skipFitBounds = false;
 
     updateStats();
 }
