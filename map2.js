@@ -82,13 +82,30 @@ function addResizeHandles(rect) {
 function initBoundsSelectionTool() {
     const rectBtn = document.getElementById('bounds-rect-btn');
     const clearBtn = document.getElementById('bounds-clear-btn');
-    if (rectBtn) rectBtn.addEventListener('click', () => {
-        if (activeSelectionMode === 'rectangle') {
-            exitSelectionMode();
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+    if (rectBtn) {
+        if (isTouchDevice) {
+            // Mobile: change button label
+            rectBtn.textContent = '⬚ Filter Current View';
+            rectBtn.addEventListener('click', () => {
+                const bounds = map.getBounds();
+                mapBoundsFilter = bounds;
+                document.getElementById('bounds-clear-btn').style.display = 'inline-block';
+                filterGalleryByBounds(bounds);
+            });
         } else {
-            enterRectangleMode();
+            // Desktop: rectangle drawing
+            rectBtn.addEventListener('click', () => {
+                if (activeSelectionMode === 'rectangle') {
+                    exitSelectionMode();
+                } else {
+                    enterRectangleMode();
+                }
+            });
         }
-    });
+    }
+
     if (clearBtn) clearBtn.addEventListener('click', clearBoundsFilter);
 }
 
