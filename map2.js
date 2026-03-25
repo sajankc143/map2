@@ -600,7 +600,8 @@ function parseCoordinates(text) {
         .replace(/&gt;/g, '>')
         .replace(/&amp;/g, '&')
         .replace(/&quot;/g, '"')
-        .replace(/&#176;/g, '°');
+        .replace(/&#176;/g, '°')
+    .replace(/&#39;/g, "'");  // ADD THIS LINE
     
     const coordPatterns = [
         /\(([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([NS])\s*([0-9]+)°([0-9]+)'([0-9]+(?:\.[0-9]+)?)''([EW])[^)]*\)/,
