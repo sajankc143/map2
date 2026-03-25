@@ -470,11 +470,10 @@ function syncMapWithSearchResults(searchFilteredImages) {
     // Convert search results to map observation format
     searchFilteredImages.forEach(image => {
         // Try to extract coordinates from the image data
-       const lat = parseFloat(image.lat);
-const lon = parseFloat(image.lon);
-
-if (!isNaN(lat) && !isNaN(lon)) {
-    observations.push({
+        const coords = parseCoordinates(image.originalTitle || image.fullTitle);
+        
+        if (coords) {
+            observations.push({
                 species: image.species,
                 commonName: image.commonName,
                 coordinates: coords,
