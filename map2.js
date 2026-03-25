@@ -761,45 +761,52 @@ function extractObservations(htmlContent, sourceUrl) {
 }
 
 async function loadObservations() {
-    if (isLoading) {
-        console.log('Already loading, skipping duplicate request');
-        return;
-    }
-    
+    if (isLoading) return;
     isLoading = true;
-    console.log('=== ROBUST LOAD OBSERVATIONS STARTED ===');
-    
+
     const loadingDiv = document.getElementById('loading');
-    if (loadingDiv) {
-        loadingDiv.style.display = 'block';
-        loadingDiv.textContent = 'Starting to load butterfly observations...';
-    }
-    
+    if (loadingDiv) loadingDiv.style.display = 'block';
+
     observations = [];
     clearMap();
 
-    const proxyServices = [
-        {
-            url: 'https://corsproxy.io/?',
-            type: 'text'
-        },
-        {
-            url: 'https://api.allorigins.win/get?url=',
-            type: 'json'
-        },
-        {
-            url: 'https://api.codetabs.com/v1/proxy?quest=',
-            type: 'text'
-        },
-        {
-            url: 'https://thingproxy.freeboard.io/fetch/',
-            type: 'text'
-        }
-    ];
+    try {
+        const response = await fetch('https://cdn.jsdelivr.net/gh/sajankc143/observationmap@main/observations.json');
+        const data = await response.json();
+        const images = data.observations || data;
 
-    let totalLoaded = 0;
-    const errors = [];
-    const maxRetries = 2;
+        images.forEach(image => {
+            if (image.lat && image.lon) {
+                observations.push({
+                    species: image.species,
+                    commonName: image.commonName,
+                    coordinates: [parseFloat(image.lat), parseFloat(image.lon)],
+                    location: image.location || '',
+                    date: image.date || '',
+                    photographer: 'Sajan K.C. & Anisha Sapkota',
+                    imageUrl: image.thumbnailUrl,
+                    fullImageUrl: image.fullImageUrl
+                });
+            }
+        });
+
+        console.log(`✅ Successfully loaded butterfly map with ${observations.length} observations!`);
+
+    } catch (error) {
+        console.error('Failed to load observations JSON:', error);
+    }
+
+    if (loadingDiv) loadingDiv.style.display = 'none';
+    displayObservations();
+    isLoading = false;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const obsId = urlParams.get('obs');
+    if (!obsId && typeof infiniteGalleryUpdater !== 'undefined' && 
+        infiniteGalleryUpdater.filteredImages && !isViewingSingleObservation) {
+        syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+    }
+}
 
     async function fetchWithFallbacks(url) {
         for (let proxyIndex = 0; proxyIndex < proxyServices.length; proxyIndex++) {
