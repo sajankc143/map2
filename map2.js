@@ -1138,9 +1138,9 @@ function updateStats() {
     const sourceCounts = {};
 
     observations.forEach(obs => {
-        const pageName = getPageName(obs.sourceUrl);
-        sourceCounts[pageName] = (sourceCounts[pageName] || 0) + 1;
-    });
+    const pageName = obs.sourceUrl ? getPageName(obs.sourceUrl) : 'Unknown';
+    sourceCounts[pageName] = (sourceCounts[pageName] || 0) + 1;
+});
 
     const statsHtml = `
         <div class="stat-card">
