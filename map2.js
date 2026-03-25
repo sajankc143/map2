@@ -211,7 +211,9 @@ function showObservationOnMap(observationData) {
     console.log('Showing single observation on map');
     
     // Parse coordinates from the observation data
-    const coords = parseCoordinates(observationData.originalTitle || observationData.fullTitle);
+    const coords = observationData.lat && observationData.lon 
+    ? [parseFloat(observationData.lat), parseFloat(observationData.lon)]
+    : parseCoordinates(observationData.fullTitle);
     
     if (!coords) {
         console.log('No coordinates found for this observation');
@@ -467,7 +469,9 @@ function syncMapWithSearchResults(searchFilteredImages) {
     // Convert search results to map observation format
     searchFilteredImages.forEach(image => {
         // Try to extract coordinates from the image data
-        const coords = parseCoordinates(image.originalTitle || image.fullTitle);
+        const coords = image.lat && image.lon
+    ? [parseFloat(image.lat), parseFloat(image.lon)]
+    : parseCoordinates(image.fullTitle);
         
         if (coords) {
             observations.push({
