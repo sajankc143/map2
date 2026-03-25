@@ -211,7 +211,7 @@ function showObservationOnMap(observationData) {
     console.log('Showing single observation on map');
     
     // Parse coordinates from the observation data
-    const coords = observationData.lat && observationData.lon 
+   const coords = observationData.lat && observationData.lon
     ? [parseFloat(observationData.lat), parseFloat(observationData.lon)]
     : parseCoordinates(observationData.fullTitle);
     
