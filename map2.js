@@ -1169,6 +1169,7 @@ function updateStats() {
 }
 
 function getPageName(url) {
+    if (!url) return 'Unknown';  // ← add this line
     const pageNames = {
         'butterflies-of-texas.html': 'Texas',
         'butterflies-of-puerto-rico.html': 'Puerto Rico',
