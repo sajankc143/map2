@@ -227,15 +227,16 @@ const coords = [lat, lon];
     
     // Create marker for this specific observation
     const markerRadius = getMarkerRadius();
-    const marker = L.circleMarker(coords, {
-        radius: markerRadius + 2,
-        fillColor: '#ff0000',
-        color: '#ffffff',
-        weight: 3,
-        opacity: 1,
-        fillOpacity: 0.9,
-        interactive: true
-    });
+    const isObscured = observationData.isObscured || false;
+const marker = L.circleMarker(coords, {
+    radius: isObscured ? markerRadius + 8 : markerRadius + 2,
+    fillColor: isObscured ? 'transparent' : '#ff0000',
+    color: isObscured ? '#ff6b35' : '#ffffff',
+    weight: isObscured ? 2 : 3,
+    opacity: 1,
+    fillOpacity: isObscured ? 0 : 0.9,
+    interactive: true
+});
     
     // Create popup content
     const popupContent = `
