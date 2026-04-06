@@ -747,6 +747,7 @@ function extractObservations(htmlContent, sourceUrl) {
                     fullImageUrl: link.getAttribute('href'),
                     sourceUrl: sourceUrl,
                     originalTitle: decodedTitle
+                    isObscured: image.isObscured || false
                 });
                 
                 console.log(`Added observation: ${species} at ${location}`);
@@ -999,13 +1000,14 @@ function displayObservations() {
 
     filteredObs.forEach(obs => {
         const markerRadius = getMarkerRadius();
-        const marker = L.circleMarker(obs.coordinates, {
-            radius: markerRadius,
-            fillColor: '#ff6b35',     
-            color: '#ffffff',         
-            weight: isTouchDevice ? 3 : 2,  
-            opacity: 1,
-            fillOpacity: 0.95,        
+        const isObscured = obs.isObscured;
+const marker = L.circleMarker(obs.coordinates, {
+    radius: isObscured ? markerRadius + 6 : markerRadius,
+    fillColor: isObscured ? 'transparent' : '#ff6b35',
+    color: isObscured ? '#ff6b35' : '#ffffff',
+    weight: isObscured ? 2 : (isTouchDevice ? 3 : 2),
+    opacity: 1,
+    fillOpacity: isObscured ? 0 : 0.95,       
             interactive: true,        
             bubblingMouseEvents: false, 
             pane: 'markerPane'       
