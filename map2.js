@@ -474,17 +474,17 @@ function syncMapWithSearchResults(searchFilteredImages) {
         
         if (coords) {
             observations.push({
-                species: image.species,
-                commonName: image.commonName,
-                coordinates: coords,
-                location: image.location || '',
-                date: image.date || '',
-                photographer: '', // Extract if available
-                imageUrl: image.thumbnailUrl,
-                fullImageUrl: image.fullImageUrl,
-                sourceUrl: image.sourceUrl,
-                originalTitle: image.originalTitle || image.fullTitle
-            });
+    species: image.species,
+    commonName: image.commonName,
+    coordinates: coords,
+    location: image.location || '',
+    date: image.date || '',
+    imageUrl: image.thumbnailUrl,
+    fullImageUrl: image.fullImageUrl,
+    sourceUrl: image.sourceUrl,
+    originalTitle: image.originalTitle || image.fullTitle,
+    isObscured: image.isObscured || false
+});
         }
     });
     
@@ -737,18 +737,18 @@ function extractObservations(htmlContent, sourceUrl) {
                 }
 
                 foundObservations.push({
-                    species: species,
-                    commonName: commonName,
-                    coordinates: coordinates,
-                    location: location,
-                    date: date,
-                    photographer: photographer,
-                    imageUrl: img.getAttribute('src'),
-                    fullImageUrl: link.getAttribute('href'),
-                    sourceUrl: sourceUrl,
-                    originalTitle: decodedTitle
-                    isObscured: image.isObscured || false
-                });
+    species: species,
+    commonName: commonName,
+    coordinates: coordinates,
+    location: location,
+    date: date,
+    photographer: photographer,
+    imageUrl: img.getAttribute('src'),
+    fullImageUrl: link.getAttribute('href'),
+    sourceUrl: sourceUrl,
+    originalTitle: decodedTitle,
+    isObscured: false
+});
                 
                 console.log(`Added observation: ${species} at ${location}`);
             } else {
