@@ -763,217 +763,50 @@ function extractObservations(htmlContent, sourceUrl) {
 }
 
 async function loadObservations() {
-    if (isLoading) {
-        console.log('Already loading, skipping duplicate request');
-        return;
-    }
-    
+    if (isLoading) return;
     isLoading = true;
-    console.log('=== ROBUST LOAD OBSERVATIONS STARTED ===');
     
     const loadingDiv = document.getElementById('loading');
     if (loadingDiv) {
         loadingDiv.style.display = 'block';
-        loadingDiv.textContent = 'Starting to load butterfly observations...';
+        loadingDiv.textContent = 'Loading observations...';
     }
     
-    observations = [];
-    clearMap();
-
-    const proxyServices = [
-        {
-            url: 'https://corsproxy.io/?',
-            type: 'text'
-        },
-        {
-            url: 'https://api.allorigins.win/get?url=',
-            type: 'json'
-        },
-        {
-            url: 'https://api.codetabs.com/v1/proxy?quest=',
-            type: 'text'
-        },
-        {
-            url: 'https://thingproxy.freeboard.io/fetch/',
-            type: 'text'
-        }
-    ];
-
-    let totalLoaded = 0;
-    const errors = [];
-    const maxRetries = 2;
-
-    async function fetchWithFallbacks(url) {
-        for (let proxyIndex = 0; proxyIndex < proxyServices.length; proxyIndex++) {
-            const proxy = proxyServices[proxyIndex];
-            
-            for (let retry = 0; retry < maxRetries; retry++) {
-                try {
-                    const proxyUrl = proxy.url + encodeURIComponent(url);
-                    console.log(`Trying proxy ${proxyIndex + 1}, attempt ${retry + 1}:`, proxy.url);
-                    
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 20000);
-                    
-                    const response = await fetch(proxyUrl, {
-                        signal: controller.signal,
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (compatible; ButterflyBot/1.0)',
-                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-                        }
-                    });
-                    
-                    clearTimeout(timeoutId);
-                    
-                    if (response.ok) {
-                        let content;
-                        
-                        if (proxy.type === 'json') {
-                            const data = await response.json();
-                            content = data.contents || data.body;
-                        } else {
-                            content = await response.text();
-                        }
-                        
-                        if (content && content.length > 1000) {
-                            console.log(`✅ Success with proxy ${proxyIndex + 1} on attempt ${retry + 1}`);
-                            return content;
-                        } else {
-                            throw new Error('Content too short or empty');
-                        }
-                    } else {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                } catch (error) {
-                    console.log(`❌ Proxy ${proxyIndex + 1}, attempt ${retry + 1} failed:`, error.message);
-                    
-                    if (retry < maxRetries - 1) {
-                        const delay = 1000 + (retry * 1000);
-                        console.log(`Waiting ${delay}ms before retry...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
-                }
-            }
-        }
+    try {
+        const response = await fetch('https://sajankc143.github.io/observationmap/observations.json');
+        const data = await response.json();
+        const images = data.observations || data;
         
-        throw new Error('All proxies and retries failed');
+        observations = images
+            .filter(img => img.lat && img.lon)
+            .map(img => ({
+                species: img.species,
+                commonName: img.commonName,
+                coordinates: [parseFloat(img.lat), parseFloat(img.lon)],
+                location: img.location || '',
+                date: img.date || '',
+                imageUrl: img.thumbnailUrl,
+                fullImageUrl: img.fullImageUrl,
+                sourceUrl: img.fullImageUrl,
+                isObscured: img.isObscured || false
+            }));
+        
+        console.log(`Loaded ${observations.length} observations from JSON`);
+    } catch (error) {
+        console.error('Failed to load observations:', error);
     }
-
-    for (let i = 0; i < sourceUrls.length; i++) {
-        const url = sourceUrls[i];
-        const pageName = getPageName(url);
-        
-        console.log(`\n--- Processing ${i + 1}/${sourceUrls.length}: ${pageName} ---`);
-        
-        if (loadingDiv) {
-            loadingDiv.textContent = `Loading ${pageName}... (${i + 1}/${sourceUrls.length})`;
-        }
-        
-        try {
-            const htmlContent = await fetchWithFallbacks(url);
-            const siteObservations = extractObservations(htmlContent, url);
-            
-            observations.push(...siteObservations);
-            totalLoaded += siteObservations.length;
-            
-            console.log(`✅ ${pageName}: ${siteObservations.length} observations (Total: ${totalLoaded})`);
-            
-            if (loadingDiv) {
-                loadingDiv.textContent = `Loaded ${pageName} - ${totalLoaded} observations found so far...`;
-            }
-            
-        } catch (error) {
-            console.error(`❌ Failed to load ${pageName}:`, error.message);
-            errors.push(`${pageName}: ${error.message}`);
-            
-            if (loadingDiv) {
-                loadingDiv.textContent = `Failed to load ${pageName}, continuing with others...`;
-            }
-        }
-
-        if (i < sourceUrls.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-    }
-
-    if (loadingDiv) {
-        loadingDiv.style.display = 'none';
-    }
-
-    console.log(`\n=== LOADING COMPLETE ===`);
-    console.log(`Successfully loaded: ${totalLoaded} observations`);
-    console.log(`Failed pages: ${errors.length}`);
-
-    if (errors.length > 0) {
-        console.log('Errors:', errors);
-        
-        const errorDiv = document.createElement('div');
-        errorDiv.style.cssText = `
-            background: #fff3cd; 
-            border: 1px solid #ffeaa7; 
-            color: #856404; 
-            padding: 10px; 
-            margin: 10px 0; 
-            border-radius: 4px;
-            position: relative;
-        `;
-        errorDiv.innerHTML = `
-            <strong>Some pages couldn't be loaded:</strong><br>
-            ${errors.join('<br>')}
-            <br><small>Showing ${totalLoaded} observations from ${sourceUrls.length - errors.length} successful pages.</small>
-            <button onclick="this.parentElement.remove()" style="position: absolute; top: 5px; right: 10px; background: none; border: none; font-size: 16px; cursor: pointer;">×</button>
-        `;
-        
-        const container = document.querySelector('.container');
-        if (container) {
-            container.insertBefore(errorDiv, document.getElementById('map'));
-        }
-        
-        setTimeout(() => {
-            if (errorDiv.parentElement) {
-                errorDiv.remove();
-            }
-        }, 15000);
-    }
-
-    displayObservations();
+    
+    if (loadingDiv) loadingDiv.style.display = 'none';
     isLoading = false;
+    displayObservations();
     
-    if (totalLoaded > 0) {
-        console.log(`✅ Successfully loaded butterfly map with ${totalLoaded} observations!`);
-    } else {
-        console.log('⚠️ No observations loaded - all sources may be down');
-        
-        if (loadingDiv) {
-            loadingDiv.style.display = 'block';
-            loadingDiv.innerHTML = `
-                <div style="color: #856404;">
-                    No observations could be loaded from any source. 
-                    <button onclick="loadObservations()" style="margin-left: 10px; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">
-                        Try Again
-                    </button>
-                </div>
-            `;
-        }
-    }
-
-    // SIMPLE FIX: Check URL before auto-syncing
     const urlParams = new URLSearchParams(window.location.search);
     const obsId = urlParams.get('obs');
     
-    if (!obsId) {
-        // Only do normal sync if there's no observation ID in URL
-        if (typeof infiniteGalleryUpdater !== 'undefined' && 
-            infiniteGalleryUpdater.filteredImages && 
-            infiniteGalleryUpdater.currentSearchParams &&
-            !isViewingSingleObservation) {
-            
-            console.log('Initial sync with existing search filters');
-            syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
-        }
-    } else {
-        console.log(`URL contains observation ID ${obsId}, skipping initial sync - waiting for gallery to show single observation`);
+    if (!obsId && typeof infiniteGalleryUpdater !== 'undefined' && 
+        infiniteGalleryUpdater.filteredImages && 
+        !isViewingSingleObservation) {
+        syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
     }
 }
 
