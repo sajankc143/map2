@@ -82,12 +82,6 @@ function addResizeHandles(rect) {
 function initBoundsSelectionTool() {
     const rectBtn = document.getElementById('bounds-rect-btn');
     const clearBtn = document.getElementById('bounds-clear-btn');
-
-    if (!rectBtn || !clearBtn) {
-        setTimeout(initBoundsSelectionTool, 100);
-        return;
-    }
-
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
     if (rectBtn) {
@@ -422,11 +416,8 @@ const boundsSelectControl = L.Control.extend({
         return container;
     }
 });
-if (!map._boundsControlAdded) {
-    map.addControl(new boundsSelectControl());
-    map._boundsControlAdded = true;
-    setTimeout(initBoundsSelectionTool, 100);
-}
+map.addControl(new boundsSelectControl());
+setTimeout(initBoundsSelectionTool, 100);
     markerGroup = L.layerGroup().addTo(map);
     
     // Add zoom event listener for responsive marker sizing
@@ -1085,9 +1076,35 @@ function initializeMapSimple() {
 
 console.log('Setting up auto-load for GitHub Pages...');
 
+if (document.readyState !== 'loading') {
+    setTimeout(initializeMapSimple, 500);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, attempting auto-load...');
     setTimeout(initializeMapSimple, 500);
 });
+
+window.addEventListener('load', () => {
+    console.log('Window loaded, attempting auto-load...');
+    setTimeout(initializeMapSimple, 500);
+});
+
+setTimeout(() => {
+    console.log('Backup attempt 1 (2s)');
+    initializeMapSimple();
+}, 2000);
+
+setTimeout(() => {
+    console.log('Backup attempt 2 (4s)');
+    initializeMapSimple();
+}, 4000);
+
+setTimeout(() => {
+    console.log('Final attempt (7s)');
+    initializeMapSimple();
+}, 7000);
+
 function refreshMap() {
     console.log('Manual refresh triggered');
     loadObservations();
