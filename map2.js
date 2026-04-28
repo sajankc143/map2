@@ -796,7 +796,7 @@ async function loadObservations() {
         console.error('Failed to load observations:', error);
     }
     
-  if (loadingDiv) loadingDiv.style.display = 'none';
+    if (loadingDiv) loadingDiv.style.display = 'none';
 isLoading = false;
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -805,7 +805,6 @@ const obsId = urlParams.get('obs');
 if (obsId) {
     isViewingSingleObservation = true;
     displayObservations();
-
     if (typeof infiniteGalleryUpdater !== 'undefined') {
         const observation = infiniteGalleryUpdater.observationDetailsMap.get(obsId);
         if (observation && typeof showObservationOnMap === 'function') {
@@ -814,7 +813,6 @@ if (obsId) {
     }
 } else {
     displayObservations();
-
     if (typeof infiniteGalleryUpdater !== 'undefined' && 
         infiniteGalleryUpdater.filteredImages && 
         !isViewingSingleObservation) {
@@ -1107,16 +1105,6 @@ setTimeout(() => {
     console.log('Backup attempt 1 (2s)');
     initializeMapSimple();
 }, 2000);
-
-setTimeout(() => {
-    console.log('Backup attempt 2 (4s)');
-    initializeMapSimple();
-}, 4000);
-
-setTimeout(() => {
-    console.log('Final attempt (7s)');
-    initializeMapSimple();
-}, 7000);
 
 function refreshMap() {
     console.log('Manual refresh triggered');
