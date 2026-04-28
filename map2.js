@@ -807,7 +807,7 @@ if (obsId) {
     displayObservations();
 
     if (typeof infiniteGalleryUpdater !== 'undefined') {
-        const observation = infiniteGalleryUpdater.observationDetailsMap.get(parseInt(obsId));
+        const observation = infiniteGalleryUpdater.observationDetailsMap.get(obsId);
         if (observation && typeof showObservationOnMap === 'function') {
             showObservationOnMap(observation);
         }
