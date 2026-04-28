@@ -796,7 +796,7 @@ async function loadObservations() {
         console.error('Failed to load observations:', error);
     }
     
-   if (loadingDiv) loadingDiv.style.display = 'none';
+  if (loadingDiv) loadingDiv.style.display = 'none';
 isLoading = false;
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -804,14 +804,22 @@ const obsId = urlParams.get('obs');
 
 if (obsId) {
     isViewingSingleObservation = true;
-}
+    displayObservations();
 
-displayObservations();
+    if (typeof infiniteGalleryUpdater !== 'undefined') {
+        const observation = infiniteGalleryUpdater.observationDetailsMap.get(parseInt(obsId));
+        if (observation && typeof showObservationOnMap === 'function') {
+            showObservationOnMap(observation);
+        }
+    }
+} else {
+    displayObservations();
 
-if (!obsId && typeof infiniteGalleryUpdater !== 'undefined' && 
-    infiniteGalleryUpdater.filteredImages && 
-    !isViewingSingleObservation) {
-    syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+    if (typeof infiniteGalleryUpdater !== 'undefined' && 
+        infiniteGalleryUpdater.filteredImages && 
+        !isViewingSingleObservation) {
+        syncMapWithSearchResults(infiniteGalleryUpdater.filteredImages);
+    }
 }
 }
 
