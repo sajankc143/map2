@@ -211,17 +211,10 @@ function showObservationOnMap(observationData) {
     console.log('Showing single observation on map');
     
     // Parse coordinates from the observation data
-   let lat, lon;
+    const lat = parseFloat(observationData.lat);
+const lon = parseFloat(observationData.lon);
 
-if (observationData.lat && observationData.lon) {
-    lat = parseFloat(observationData.lat);
-    lon = parseFloat(observationData.lon);
-} else if (observationData.coordinates) {
-    lat = observationData.coordinates[0];
-    lon = observationData.coordinates[1];
-}
-
-if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+if (!observationData.lat || !observationData.lon || isNaN(lat) || isNaN(lon)) {
     console.log('No coordinates found for this observation');
     isViewingSingleObservation = false;
     return;
